@@ -9,11 +9,11 @@ from collections import OrderedDict
 from flask_restful import reqparse, Api, Resource
 
 # 디버그용
-isDebugging = False
+isDebugging = True
 # today에서 사용됨
 today_year = 2019
 today_month = 7
-today_date = 14
+today_date = 12
 
 # Flask 인스턴스 생성
 app = Flask(__name__)
