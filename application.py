@@ -7,13 +7,14 @@ from bs4 import BeautifulSoup
 import json
 from collections import OrderedDict
 from flask_restful import reqparse, Api, Resource
+import re
 
 # 디버그용
-isDebugging = False
+isDebugging = True
 # today에서 사용됨
 today_year = 2019
 today_month = 7
-today_date = 12
+today_date = 14
 
 # Flask 인스턴스 생성
 app = Flask(__name__)
@@ -21,62 +22,76 @@ api = Api(app)
 
 
 # 파서
-def parse(year, month):
-    year = year
-    month = month
+def parse(year, month, date, isDebugging):
+    year = str(year).zfill(2)
+    month = str(month).zfill(2)
+    date = str(date).zfill(2)
 
     try:
-        url = urllib.request.urlopen(
-            "https://www.heungdeok.ms.kr/segio/meal_v2/meal_month.php?year=" + year + "&month=" + month)
+        url = urllib.request.urlopen("http://stu.goe.go.kr/sts_sci_md01_001.do?"
+                                     "schulCode=J100005775"
+                                     "&schulCrseScCode=3"
+                                     "&schulKndScCode=03"
+                                     "&schMmealScCode=2"
+                                     "&schYmd=%s.%s.%s" % (year, month, date))
     except Exception as error:
         if isDebugging:
             print(error)
         return error
     data = BeautifulSoup(url, 'html.parser')
+    data = data.find_all("tr")
+
+    # 날싸 파싱
+    loc = int()
+    raw_date = data[0].find_all("th")
+    for i in range(8):
+        if year.zfill(4) + "." + month.zfill(2) + "." + date.zfill(2) in str(raw_date[i]):
+            loc = i-1
+            date = raw_date[i].get_text().strip()
+            if isDebugging:
+                print(loc)
+                print(date)
+    if not loc:
+        return ""
+
+    # 알레르기정보 선언
+    allergy_filter = ["1.", "2.", "3.", "4.", "5.", "6.", "7.", "8.",
+                      "9.", "10.", "11.", "12.", "13.", "14.", "15.", "16.",
+                      "17.", "18."]
+    allergy_string = ["[난류]", "[우유]", "[메밀]", "[땅콩]", "[대두]", "[밀]", "[고등어]", "[게]",
+                      "[새우]", "[돼지고기]", "[복숭아]", "[토마토]", "[아황산류]", "[호두]", "[닭고기]", "[쇠고기]",
+                      "[오징어]", "[조개류]"]
+    allergy_filter.reverse()
+    allergy_string.reverse() # 역순으로 정렬 - 오류방지
 
     # 메뉴 파싱
-    raw_meal = data.find_all("div", {"class": "meal_cont"})
-    raw_meal = data.find_all("a")
+    menu = data[2].find_all("td")
+    menu = str(menu[loc]).replace('<br/>', '.\n') # 줄바꿈 처리
+    menu = re.sub('<.+?>', '', menu).strip()  # 태그 처리
+    for i in range(18):
+        menu = menu.replace(allergy_filter[i], allergy_string[i])
     if isDebugging:
-        print(raw_meal)
+        print(menu)
 
-    meal = list()
-    for i in raw_meal:
-        if i.get_text() != "":
-            meal.append(i.get_text().strip())
+    # 칼로리 파싱
+    kcal = data[45].find_all("td")
+    kcal = kcal[loc].get_text().strip()
     if isDebugging:
-        print(meal)
+        print(kcal)
 
-    # 날짜 파싱
-    date = list()
-    for i in raw_meal:
-        if i.get_text() != "":
-            date.append(int(i.get("name").split(",")[2]))
+    # 반환값 생성
+    return_data = OrderedDict()
+    return_data["date"] = date
+    return_data["menu"] = menu
+    return_data["kcal"] = kcal
     if isDebugging:
-        print(date)
+        print(return_data)
 
-    # JSON 생성
-    if len(date) == 0 or len(meal) == 0:
-        if isDebugging:
-            print("NoData")
-        return("NoData")
-
-    json_data = OrderedDict()
-    for i in range(len(date)):
-        json_data[date[i]] = meal[i]
-    if isDebugging:
-        print(json_data)
-
-    # 파일 생성
-    with open('data/' + year.zfill(4) + '.' + month.zfill(2) + '.json', 'w', encoding="utf-8") as make_file:
-        json.dump(json_data, make_file, ensure_ascii=False, indent="\t")
-        if isDebugging:
-            print("File Created")
-
-    # 파일 체크
-    with open('data/' + year.zfill(4) + '.' + month.zfill(2) + '.json', 'r', encoding="utf-8") as file:
-        if isDebugging:
-            print(file.read())
+    with open(
+            'data/' + date[:10] + '.json', 'w',
+            encoding="utf-8") as make_file:
+        json.dump(return_data, make_file, ensure_ascii=False, indent="\t")
+        print("File Created")
 
     return 0
 
@@ -88,37 +103,19 @@ def meal_data(year, month, date):
     month = str(month)
     date = str(date)
 
-    if not os.path.isfile('data/' + str(year).zfill(4) + '.' + str(month).zfill(2) + '.json'):
-        parse(year, month)
+    if not os.path.isfile('data/' + year.zfill(4) + '.' + month.zfill(2) + '.' + date.zfill(2) +'.json'):
+        parse(year, month, date, isDebugging)
 
-    dict_data = OrderedDict()
-    dict_data["year"] = year
-    dict_data["month"] = month
-    dict_data["date"] = date
-
+    json_data = OrderedDict()
     try:
-        with open('data/' + year.zfill(4) + '.' + month.zfill(2) + '.json', encoding="utf-8") as data_file:
+        with open('data/' + year.zfill(4) + '.' + month.zfill(2) + '.' + date.zfill(2) +'.json', encoding="utf-8") as data_file:
             data = json.load(data_file, object_pairs_hook=OrderedDict)
-
-            if date in data:
-                dict_data["menu"] = data[date]
-                if isDebugging:
-                    print(data[date])
-            else:
-                dict_data["menu"] = "급식을 실시하지 않습니다."
-                if isDebugging:
-                    print("KeyNotFound")
+            json_data = data
     except FileNotFoundError:  # 파일 없을때
         if isDebugging:
             print("FileNotFound")
-        dict_data["menu"] = "해당월 데이터가 등록되어있지 않습니다."
-    except Exception as error:
-        if isDebugging:
-            print("Error :" + str(type(error)) + str(error))
-            dict_data["menu"] = "Error :" + str(type(error)) + str(error)
-        else:
-            dict_data["menu"] = "Error"
-    return dict_data
+        json_data["message"] = "데이터가 없습니다."
+    return json_data
 
 
 # 오늘
@@ -140,6 +137,17 @@ class Date(Resource):
     def get(self, year, month, date):
         return meal_data(year, month, date)
 
+# Fulfillment (Dialogflow) - 챗봇용
+class Fulfillment(Resource):
+    def post(self):
+        parser = reqparse.RequestParser()
+        parser.add_argument("outputContexts")
+        args = parser.parse_args()
+        json_data = json.loads(args["outputContexts"].replace("'", '"'))
+        year = datetime.datetime.strptime(json_data["parameters"]["param"], "%Y-%m-%d").timetuple()[0]
+        month = datetime.datetime.strptime(json_data["parameters"]["param"], "%Y-%m-%d").timetuple()[1]
+        date = datetime.datetime.strptime(json_data["parameters"]["param"], "%Y-%m-%d").timetuple()[2]
+        return meal_data(year, month, date)
 
 # 캐시 비우기
 class PurgeCache(Resource):
@@ -157,13 +165,10 @@ class PurgeCache(Resource):
         dict_data["status"] = "OK"
         return dict_data
 
-
-parser = reqparse.RequestParser()
-parser.add_argument('task')
-
 # URL Router에 맵핑한다.(Rest URL정의)
 api.add_resource(Today, '/today/')
 api.add_resource(Date, '/date/<int:year>-<int:month>-<int:date>')
+api.add_resource(Fulfillment, '/fulfillment-gateway/')
 api.add_resource(PurgeCache, '/purge/')
 
 # 서버 실행
