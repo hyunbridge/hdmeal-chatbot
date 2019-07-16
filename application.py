@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, make_response
 import os
 import datetime
 from pytz import timezone
@@ -9,7 +9,7 @@ from collections import OrderedDict
 from flask_restful import request, Api, Resource
 import re
 
-version = 0.3
+version = str(2.0)
 
 # 디버그용
 isDebugging = True
@@ -127,34 +127,33 @@ class Date(Resource):
 # Skill (Kakao i Open Builder) - 챗봇용
 class Skill(Resource):
     def post(self):
+        return_simpleText = OrderedDict()
+        return_outputs = OrderedDict()
+        return_list = list()
         return_template = OrderedDict()
         return_data = OrderedDict()
         try:
             sys_date = json.loads(json.loads(request.data)["action"]["params"]["sys_date"])["date"]
         except Exception:
-            return_template["date"] = "-"
-            return_template["menu"] = "오류가 발생했습니다."
-            return_template["kcal"] = "-"
+            return_simpleText["text"] = "오류가 발생했습니다."
+            return_outputs["simpleText"] = return_simpleText
+            return_list.append(return_outputs)
+            return_template["outputs"] = return_list
             return_data["version"] = version
-            return_data["data"] = return_template
+            return_data["template"] = return_template
             return return_data
         year = datetime.datetime.strptime(sys_date, "%Y-%m-%d").timetuple()[0]
         month = datetime.datetime.strptime(sys_date, "%Y-%m-%d").timetuple()[1]
         date = datetime.datetime.strptime(sys_date, "%Y-%m-%d").timetuple()[2]
         meal = meal_data(year, month, date)
-        if "message" in meal:
-            weekday = datetime.datetime.strptime(sys_date, "%Y-%m-%d").weekday()
-            weekday_string = ["월", "화", "수", "목", "금", "토", "일"]
-            weekday = weekday_string[weekday]
-            return_template["date"] = "%s-%s-%s(%s)" % (str(year).zfill(4),  str(month).zfill(2), str(date).zfill(2), weekday)
-            return_template["menu"] = meal["message"]
-            return_template["kcal"] = "-"
-        else:
-            return_template["date"] = meal["date"]
-            return_template["menu"] = meal["menu"]
-            return_template["kcal"] = meal["kcal"]
+        if not "message" in meal:
+            meal["message"] = "%s:\n%s\n\n 열량: %s kcal" % (meal["date"], meal["menu"], meal["kcal"])
+        return_simpleText["text"] = meal["message"]
+        return_outputs["simpleText"] = return_simpleText
+        return_list.append(return_outputs)
+        return_template["outputs"] = return_list
         return_data["version"] = version
-        return_data["data"] = return_template
+        return_data["template"] = return_template
         return return_data
 
 # 캐시 비우기
