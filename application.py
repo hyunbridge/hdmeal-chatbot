@@ -6,8 +6,10 @@ import urllib.request
 from bs4 import BeautifulSoup
 import json
 from collections import OrderedDict
-from flask_restful import reqparse, Api, Resource
+from flask_restful import request, Api, Resource
 import re
+
+version = 0.3
 
 # 디버그용
 isDebugging = True
@@ -47,7 +49,7 @@ def parse(year, month, date, isDebugging):
     for i in range(8):
         if year.zfill(4) + "." + month.zfill(2) + "." + date.zfill(2) in str(raw_date[i]):
             loc = i-1
-            date = raw_date[i].get_text().strip()
+            date = raw_date[i].get_text().strip().replace(".", "-")
             if isDebugging:
                 print(loc)
                 print(date)
@@ -103,51 +105,57 @@ def meal_data(year, month, date):
     month = str(month)
     date = str(date)
 
-    if not os.path.isfile('data/' + year.zfill(4) + '.' + month.zfill(2) + '.' + date.zfill(2) +'.json'):
+    if not os.path.isfile('data/' + year.zfill(4) + '-' + month.zfill(2) + '-' + date.zfill(2) +'.json'):
         parse(year, month, date, isDebugging)
 
     json_data = OrderedDict()
     try:
-        with open('data/' + year.zfill(4) + '.' + month.zfill(2) + '.' + date.zfill(2) +'.json', encoding="utf-8") as data_file:
+        with open('data/' + year.zfill(4) + '-' + month.zfill(2) + '-' + date.zfill(2) +'.json', encoding="utf-8") as data_file:
             data = json.load(data_file, object_pairs_hook=OrderedDict)
             json_data = data
     except FileNotFoundError:  # 파일 없을때
         if isDebugging:
             print("FileNotFound")
-        json_data["message"] = "데이터가 없습니다."
+        json_data["message"] = "등록된 데이터가 없습니다."
     return json_data
-
-
-# 오늘
-class Today(Resource):
-    def get(self):
-        if isDebugging:
-            year = today_year
-            month = today_month
-            date = today_date
-        else:
-            year = list(timezone('Asia/Seoul').localize(datetime.datetime.now()).timetuple())[0]
-            month = list(timezone('Asia/Seoul').localize(datetime.datetime.now()).timetuple())[1]
-            date = list(timezone('Asia/Seoul').localize(datetime.datetime.now()).timetuple())[2]
-        return meal_data(year, month, date)
-
 
 # 특정 날짜
 class Date(Resource):
     def get(self, year, month, date):
         return meal_data(year, month, date)
 
-# Fulfillment (Dialogflow) - 챗봇용
-class Fulfillment(Resource):
+# Skill (Kakao i Open Builder) - 챗봇용
+class Skill(Resource):
     def post(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument("outputContexts")
-        args = parser.parse_args()
-        json_data = json.loads(args["outputContexts"].replace("'", '"'))
-        year = datetime.datetime.strptime(json_data["parameters"]["param"], "%Y-%m-%d").timetuple()[0]
-        month = datetime.datetime.strptime(json_data["parameters"]["param"], "%Y-%m-%d").timetuple()[1]
-        date = datetime.datetime.strptime(json_data["parameters"]["param"], "%Y-%m-%d").timetuple()[2]
-        return meal_data(year, month, date)
+        return_template = OrderedDict()
+        return_data = OrderedDict()
+        try:
+            sys_date = json.loads(json.loads(request.data)["action"]["params"]["sys_date"])["date"]
+        except Exception:
+            return_template["date"] = "-"
+            return_template["menu"] = "오류가 발생했습니다."
+            return_template["kcal"] = "-"
+            return_data["version"] = version
+            return_data["data"] = return_template
+            return return_data
+        year = datetime.datetime.strptime(sys_date, "%Y-%m-%d").timetuple()[0]
+        month = datetime.datetime.strptime(sys_date, "%Y-%m-%d").timetuple()[1]
+        date = datetime.datetime.strptime(sys_date, "%Y-%m-%d").timetuple()[2]
+        meal = meal_data(year, month, date)
+        if "message" in meal:
+            weekday = datetime.datetime.strptime(sys_date, "%Y-%m-%d").weekday()
+            weekday_string = ["월", "화", "수", "목", "금", "토", "일"]
+            weekday = weekday_string[weekday]
+            return_template["date"] = "%s-%s-%s(%s)" % (str(year).zfill(4),  str(month).zfill(2), str(date).zfill(2), weekday)
+            return_template["menu"] = meal["message"]
+            return_template["kcal"] = "-"
+        else:
+            return_template["date"] = meal["date"]
+            return_template["menu"] = meal["menu"]
+            return_template["kcal"] = meal["kcal"]
+        return_data["version"] = version
+        return_data["data"] = return_template
+        return return_data
 
 # 캐시 비우기
 class PurgeCache(Resource):
@@ -166,9 +174,8 @@ class PurgeCache(Resource):
         return dict_data
 
 # URL Router에 맵핑한다.(Rest URL정의)
-api.add_resource(Today, '/today/')
 api.add_resource(Date, '/date/<int:year>-<int:month>-<int:date>')
-api.add_resource(Fulfillment, '/fulfillment-gateway/')
+api.add_resource(Skill, '/skill-gateway/')
 api.add_resource(PurgeCache, '/purge/')
 
 # 서버 실행
