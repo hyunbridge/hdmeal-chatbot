@@ -70,6 +70,8 @@ def parse(year, month, date, isDebugging):
     menu = data[2].find_all("td")
     menu = str(menu[loc]).replace('<br/>', '.\n') # 줄바꿈 처리
     menu = re.sub('<.+?>', '', menu).strip()  # 태그 처리
+    if menu == "":
+        return "NoData"
     for i in range(18):
         menu = menu.replace(allergy_filter[i], allergy_string[i])
     if isDebugging:
@@ -147,7 +149,7 @@ class Skill(Resource):
         date = datetime.datetime.strptime(sys_date, "%Y-%m-%d").timetuple()[2]
         meal = meal_data(year, month, date)
         if not "message" in meal:
-            meal["message"] = "%s:\n%s\n\n 열량: %s kcal" % (meal["date"], meal["menu"], meal["kcal"])
+            meal["message"] = "%s:\n\n%s\n\n열량: %s kcal" % (meal["date"], meal["menu"], meal["kcal"])
         return_simpleText["text"] = meal["message"]
         return_outputs["simpleText"] = return_simpleText
         return_list.append(return_outputs)
