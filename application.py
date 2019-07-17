@@ -9,8 +9,6 @@ from collections import OrderedDict
 from flask_restful import request, Api, Resource
 import re
 
-version = str(2.0)
-
 # 디버그용
 isDebugging = True
 # today에서 사용됨
@@ -46,13 +44,16 @@ def parse(year, month, date, isDebugging):
     # 날싸 파싱
     loc = int()
     raw_date = data[0].find_all("th")
-    for i in range(8):
-        if year.zfill(4) + "." + month.zfill(2) + "." + date.zfill(2) in str(raw_date[i]):
-            loc = i-1
-            date = raw_date[i].get_text().strip().replace(".", "-")
-            if isDebugging:
-                print(loc)
-                print(date)
+    try:
+        for i in range(8):
+            if year.zfill(4) + "." + month.zfill(2) + "." + date.zfill(2) in str(raw_date[i]):
+                loc = i - 1
+                date = raw_date[i].get_text().strip().replace(".", "-")
+                if isDebugging:
+                    print(loc)
+                    print(date)
+    except IndexError:
+        return "IndexError"
     if not loc:
         return ""
 
@@ -68,7 +69,10 @@ def parse(year, month, date, isDebugging):
 
     # 메뉴 파싱
     menu = data[2].find_all("td")
-    menu = str(menu[loc]).replace('<br/>', '.\n') # 줄바꿈 처리
+    try:
+        menu = str(menu[loc]).replace('<br/>', '.\n') # 줄바꿈 처리
+    except IndexError:
+        return "IndexError"
     menu = re.sub('<.+?>', '', menu).strip()  # 태그 처리
     if menu == "":
         return "NoData"
@@ -134,27 +138,38 @@ class Skill(Resource):
         return_list = list()
         return_template = OrderedDict()
         return_data = OrderedDict()
+        def return_error():
+            return_simpleText["text"] = "오류가 발생했습니다."
+            return_outputs["simpleText"] = return_simpleText
+            if not return_outputs in return_list:
+                return_list.append(return_outputs)
+            return_template["outputs"] = return_list
+            return_data["version"] = "2.0"
+            return_data["template"] = return_template
+            return return_data
+        sys_date = str()
+        year = int()
+        month = int()
+        date = int()
         try:
             sys_date = json.loads(json.loads(request.data)["action"]["params"]["sys_date"])["date"]
         except Exception:
-            return_simpleText["text"] = "오류가 발생했습니다."
-            return_outputs["simpleText"] = return_simpleText
-            return_list.append(return_outputs)
-            return_template["outputs"] = return_list
-            return_data["version"] = version
-            return_data["template"] = return_template
-            return return_data
-        year = datetime.datetime.strptime(sys_date, "%Y-%m-%d").timetuple()[0]
-        month = datetime.datetime.strptime(sys_date, "%Y-%m-%d").timetuple()[1]
-        date = datetime.datetime.strptime(sys_date, "%Y-%m-%d").timetuple()[2]
+            return_error()
+        try:
+            year = datetime.datetime.strptime(sys_date, "%Y-%m-%d").timetuple()[0]
+            month = datetime.datetime.strptime(sys_date, "%Y-%m-%d").timetuple()[1]
+            date = datetime.datetime.strptime(sys_date, "%Y-%m-%d").timetuple()[2]
+        except ValueError:
+            return_error()
         meal = meal_data(year, month, date)
         if not "message" in meal:
             meal["message"] = "%s:\n\n%s\n\n열량: %s kcal" % (meal["date"], meal["menu"], meal["kcal"])
         return_simpleText["text"] = meal["message"]
         return_outputs["simpleText"] = return_simpleText
-        return_list.append(return_outputs)
+        if not return_outputs in return_list:
+            return_list.append(return_outputs)
         return_template["outputs"] = return_list
-        return_data["version"] = version
+        return_data["version"] = "2.0"
         return_data["template"] = return_template
         return return_data
 
