@@ -173,6 +173,53 @@ class Skill(Resource):
         return_data["template"] = return_template
         return return_data
 
+# Skill 특정날짜(고정값) 조회
+class SkillSpecificDate(Resource):
+    def post(self):
+        return_simpleText = OrderedDict()
+        return_outputs = OrderedDict()
+        return_list = list()
+        return_template = OrderedDict()
+        return_data = OrderedDict()
+        def return_error():
+            return_simpleText["text"] = "오류가 발생했습니다."
+            return_outputs["simpleText"] = return_simpleText
+            if not return_outputs in return_list:
+                return_list.append(return_outputs)
+            return_template["outputs"] = return_list
+            return_data["version"] = "2.0"
+            return_data["template"] = return_template
+            return return_data
+        specific_date = str()
+        year = int()
+        month = int()
+        date = int()
+        try:
+            specific_date = json.loads(request.data)["action"]["params"]["date"]
+        except Exception:
+            return_error()
+        try:
+            year = datetime.datetime.strptime(specific_date, "%Y-%m-%d").timetuple()[0]
+            month = datetime.datetime.strptime(specific_date, "%Y-%m-%d").timetuple()[1]
+            date = datetime.datetime.strptime(specific_date, "%Y-%m-%d").timetuple()[2]
+        except ValueError:
+            return_error()
+        print(specific_date)
+        print(year)
+        print(month)
+        print(date)
+        meal = meal_data(year, month, date)
+        if not "message" in meal:
+            meal["message"] = "%s:\n\n%s\n\n열량: %s kcal" % (meal["date"], meal["menu"], meal["kcal"])
+        return_simpleText["text"] = meal["message"]
+        return_outputs["simpleText"] = return_simpleText
+        if not return_outputs in return_list:
+            return_list.append(return_outputs)
+        return_template["outputs"] = return_list
+        return_data["version"] = "2.0"
+        return_data["template"] = return_template
+        return return_data
+
 # 캐시 비우기
 class PurgeCache(Resource):
     def get(self):
@@ -192,6 +239,7 @@ class PurgeCache(Resource):
 # URL Router에 맵핑한다.(Rest URL정의)
 api.add_resource(Date, '/date/<int:year>-<int:month>-<int:date>')
 api.add_resource(Skill, '/skill-gateway/')
+api.add_resource(SkillSpecificDate, '/skill-gateway/specificdate')
 api.add_resource(PurgeCache, '/purge/')
 
 # 서버 실행
