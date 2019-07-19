@@ -10,7 +10,7 @@ from flask_restful import request, Api, Resource
 import re
 
 # 디버그용
-isDebugging = True
+isDebugging = False
 # today에서 사용됨
 today_year = 2019
 today_month = 7
