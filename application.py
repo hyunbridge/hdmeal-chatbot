@@ -15,6 +15,7 @@ isDebugging = False
 today_year = 2019
 today_month = 7
 today_date = 14
+# 시간표에서 사용됨
 
 # Flask 인스턴스 생성
 app = Flask(__name__)
@@ -125,6 +126,36 @@ def meal_data(year, month, date):
         json_data["message"] = "등록된 데이터가 없습니다."
     return json_data
 
+
+# 시간표 가져오기
+def timetable(Grade, Class, Weekday):
+    try:
+        url = urllib.request.urlopen("https://comci.azurewebsites.net/"
+                                     "?schoolName=%ED%9D%A5%EB%8D%95%EC%A4%91%ED%95%99%EA%B5%90"
+                                     "&gradeNumber=" + Grade + "&classNumber=" + Class + "&resultType=week")
+    except Exception as error:
+        print("오류")
+
+    data = url.read().decode('utf-8')
+
+    json_data = json.loads(data)
+
+    if Weekday >= 5:
+        return "NoData"
+    data = json_data["data"]["result"][Weekday]
+    header = ("%s(%s):\n" % (data["date"].replace(".", "-"), data["day"].replace("요일", "")))
+    print(header)
+    if Weekday == 1 or Weekday == 3:
+        body = ("1교시: %s\n2교시: %s\n3교시: %s\n4교시: %s\n5교시: %s\n6교시: %s\n7교시: %s"
+                % (data["class01"][:2], data["class02"][:2], data["class03"][:2], data["class04"][:2],
+                   data["class05"][:2], data["class06"][:2], data["class07"][:2]))
+    else:
+        body = ("1교시: %s\n2교시: %s\n3교시: %s\n4교시: %s\n5교시: %s\n6교시: %s"
+                % (data["class01"][:2], data["class02"][:2], data["class03"][:2],
+                   data["class04"][:2], data["class05"][:2], data["class06"][:2]))
+    return header + body
+
+
 # 특정 날짜
 class Date(Resource):
     def get(self, year, month, date):
@@ -220,6 +251,51 @@ class SkillSpecificDate(Resource):
         return_data["template"] = return_template
         return return_data
 
+# Skill 시간표 조회
+class Timetable(Resource):
+    def post(self):
+        return_simpleText = OrderedDict()
+        return_outputs = OrderedDict()
+        return_list = list()
+        return_template = OrderedDict()
+        return_data = OrderedDict()
+        def return_error():
+            return_simpleText["text"] = "오류가 발생했습니다."
+            return_outputs["simpleText"] = return_simpleText
+            if not return_outputs in return_list:
+                return_list.append(return_outputs)
+            return_template["outputs"] = return_list
+            return_data["version"] = "2.0"
+            return_data["template"] = return_template
+            return return_data
+        Grade = str()
+        Class = str()
+        Weekday = int()
+        try:
+            Grade = json.loads(request.data)["action"]["params"]["Grade"]
+        except Exception:
+            return_error()
+        try:
+            Class = json.loads(request.data)["action"]["params"]["Class"]
+        except Exception:
+            return_error()
+        try:
+            Weekday = int(json.loads(request.data)["action"]["params"]["weekday"])
+        except Exception:
+            return_error()
+        print(Grade)
+        print(Class)
+        print(Weekday)
+        tt = timetable(Grade, Class, Weekday)
+        return_simpleText["text"] = tt
+        return_outputs["simpleText"] = return_simpleText
+        if not return_outputs in return_list:
+            return_list.append(return_outputs)
+        return_template["outputs"] = return_list
+        return_data["version"] = "2.0"
+        return_data["template"] = return_template
+        return return_data
+
 # 캐시 비우기
 class PurgeCache(Resource):
     def get(self):
@@ -240,6 +316,7 @@ class PurgeCache(Resource):
 api.add_resource(Date, '/date/<int:year>-<int:month>-<int:date>')
 api.add_resource(Skill, '/skill-gateway/')
 api.add_resource(SkillSpecificDate, '/skill-gateway/specificdate')
+api.add_resource(Timetable, '/skill-gateway/tt')
 api.add_resource(PurgeCache, '/purge/')
 
 # 서버 실행
