@@ -280,7 +280,7 @@ class Timetable(Resource):
         except Exception:
             return_error()
         try:
-            Weekday = int(json.loads(request.data)["action"]["params"]["weekday"])
+            Weekday = int(json.loads(request.data)["action"]["params"]["Weekday"])
         except Exception:
             return_error()
         print(Grade)
