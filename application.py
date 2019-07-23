@@ -143,7 +143,7 @@ def timetable(Grade, Class, Weekday):
     if Weekday >= 5:
         return "NoData"
     data = json_data["data"]["result"][Weekday]
-    header = ("%s(%s):\n" % (data["date"].replace(".", "-"), data["day"].replace("요일", "")))
+    header = ("%s(%s):\n\n" % (data["date"].replace(".", "-"), data["day"].replace("요일", "")))
     print(header)
     if Weekday == 1 or Weekday == 3:
         body = ("1교시: %s\n2교시: %s\n3교시: %s\n4교시: %s\n5교시: %s\n6교시: %s\n7교시: %s"
