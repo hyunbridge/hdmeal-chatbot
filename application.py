@@ -134,17 +134,20 @@ def timetable(Grade, Class, Weekday):
                                      "?schoolName=%ED%9D%A5%EB%8D%95%EC%A4%91%ED%95%99%EA%B5%90"
                                      "&gradeNumber=" + Grade + "&classNumber=" + Class + "&resultType=week")
     except Exception as error:
-        print("오류")
+        if isDebugging:
+            print("오류")
+        return ""
 
     data = url.read().decode('utf-8')
 
     json_data = json.loads(data)
 
     if Weekday >= 5:
-        return "NoData"
+        return "등록된 데이터가 없습니다."
     data = json_data["data"]["result"][Weekday]
     header = ("%s(%s):\n\n" % (data["date"].replace(".", "-"), data["day"].replace("요일", "")))
-    print(header)
+    if isDebugging:
+        print(header)
     if Weekday == 1 or Weekday == 3:
         body = ("1교시: %s\n2교시: %s\n3교시: %s\n4교시: %s\n5교시: %s\n6교시: %s\n7교시: %s"
                 % (data["class01"][:2], data["class02"][:2], data["class03"][:2], data["class04"][:2],
@@ -235,10 +238,11 @@ class SkillSpecificDate(Resource):
             date = datetime.datetime.strptime(specific_date, "%Y-%m-%d").timetuple()[2]
         except ValueError:
             return_error()
-        print(specific_date)
-        print(year)
-        print(month)
-        print(date)
+        if isDebugging:
+            print(specific_date)
+            print(year)
+            print(month)
+            print(date)
         meal = meal_data(year, month, date)
         if not "message" in meal:
             meal["message"] = "%s:\n\n%s\n\n열량: %s kcal" % (meal["date"], meal["menu"], meal["kcal"])
@@ -270,6 +274,7 @@ class Timetable(Resource):
             return return_data
         Grade = str()
         Class = str()
+        sys_date = str()
         Weekday = int()
         try:
             Grade = json.loads(request.data)["action"]["params"]["Grade"]
@@ -280,12 +285,17 @@ class Timetable(Resource):
         except Exception:
             return_error()
         try:
-            Weekday = int(json.loads(request.data)["action"]["params"]["Weekday"])
+            sys_date = json.loads(json.loads(request.data)["action"]["params"]["sys_date"])["date"]
         except Exception:
             return_error()
-        print(Grade)
-        print(Class)
-        print(Weekday)
+        try:
+            Weekday = datetime.datetime.strptime(sys_date, "%Y-%m-%d").weekday()
+        except ValueError:
+            return_error()
+        if isDebugging:
+            print(Grade)
+            print(Class)
+            print(Weekday)
         tt = timetable(Grade, Class, Weekday)
         return_simpleText["text"] = tt
         return_outputs["simpleText"] = return_simpleText
