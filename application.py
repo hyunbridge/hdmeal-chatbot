@@ -1,7 +1,14 @@
-from flask import Flask, make_response
+# ██╗  ██╗██████╗ ███╗   ███╗███████╗ █████╗ ██╗
+# ██║  ██║██╔══██╗████╗ ████║██╔════╝██╔══██╗██║
+# ███████║██║  ██║██╔████╔██║█████╗  ███████║██║
+# ██╔══██║██║  ██║██║╚██╔╝██║██╔══╝  ██╔══██║██║
+# ██║  ██║██████╔╝██║ ╚═╝ ██║███████╗██║  ██║███████╗
+# ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
+# Copyright 2018, Hyungyo Seo
+
+from flask import Flask
 import os
 import datetime
-from pytz import timezone
 import urllib.request
 from bs4 import BeautifulSoup
 import json
@@ -23,7 +30,7 @@ api = Api(app)
 
 
 # 파서
-def parse(year, month, date, isDebugging):
+def parse(year, month, date):
     year = str(year).zfill(2)
     month = str(month).zfill(2)
     date = str(date).zfill(2)
@@ -66,12 +73,12 @@ def parse(year, month, date, isDebugging):
                       "[새우]", "[돼지고기]", "[복숭아]", "[토마토]", "[아황산류]", "[호두]", "[닭고기]", "[쇠고기]",
                       "[오징어]", "[조개류]"]
     allergy_filter.reverse()
-    allergy_string.reverse() # 역순으로 정렬 - 오류방지
+    allergy_string.reverse()  # 역순으로 정렬 - 오류방지
 
     # 메뉴 파싱
     menu = data[2].find_all("td")
     try:
-        menu = str(menu[loc]).replace('<br/>', '.\n') # 줄바꿈 처리
+        menu = str(menu[loc]).replace('<br/>', '.\n')  # 줄바꿈 처리
     except IndexError:
         return "IndexError"
     menu = re.sub('<.+?>', '', menu).strip()  # 태그 처리
@@ -112,12 +119,13 @@ def meal_data(year, month, date):
     month = str(month)
     date = str(date)
 
-    if not os.path.isfile('data/' + year.zfill(4) + '-' + month.zfill(2) + '-' + date.zfill(2) +'.json'):
-        parse(year, month, date, isDebugging)
+    if not os.path.isfile('data/' + year.zfill(4) + '-' + month.zfill(2) + '-' + date.zfill(2) + '.json'):
+        parse(year, month, date)
 
     json_data = OrderedDict()
     try:
-        with open('data/' + year.zfill(4) + '-' + month.zfill(2) + '-' + date.zfill(2) +'.json', encoding="utf-8") as data_file:
+        with open('data/' + year.zfill(4) + '-' + month.zfill(2) + '-' + date.zfill(2) + '.json',
+                  encoding="utf-8") as data_file:
             data = json.load(data_file, object_pairs_hook=OrderedDict)
             json_data = data
     except FileNotFoundError:  # 파일 없을때
@@ -128,12 +136,18 @@ def meal_data(year, month, date):
 
 
 # 시간표 가져오기
-def timetable(Grade, Class, Weekday):
+def timetable(tt_grade, tt_class, tt_weekday):
+    # Github Juneyoung-Kang님의 KoreanSchoolAPI 사용
+    # https://github.com/Juneyoung-Kang/koreanschoolapi
+
+    if tt_weekday >= 5:  # 토요일, 일요일 제외
+        return "등록된 데이터가 없습니다."
+
     try:
         url = urllib.request.urlopen("https://comci.azurewebsites.net/"
                                      "?schoolName=%ED%9D%A5%EB%8D%95%EC%A4%91%ED%95%99%EA%B5%90"
-                                     "&gradeNumber=" + Grade + "&classNumber=" + Class + "&resultType=week")
-    except Exception as error:
+                                     "&gradeNumber=" + tt_grade + "&classNumber=" + tt_class + "&resultType=week")
+    except Exception:
         if isDebugging:
             print("오류")
         return ""
@@ -142,17 +156,17 @@ def timetable(Grade, Class, Weekday):
 
     json_data = json.loads(data)
 
-    if Weekday >= 5:
-        return "등록된 데이터가 없습니다."
-    data = json_data["data"]["result"][Weekday]
+    data = json_data["data"]["result"][tt_weekday]
+    # 헤더 작성. yyyy-mm-dd(요일): 형식
     header = ("%s(%s):\n\n" % (data["date"].replace(".", "-"), data["day"].replace("요일", "")))
     if isDebugging:
         print(header)
-    if Weekday == 1 or Weekday == 3:
+    # 본문 작성
+    if tt_weekday == 1 or tt_weekday == 3:  # 화, 목
         body = ("1교시: %s\n2교시: %s\n3교시: %s\n4교시: %s\n5교시: %s\n6교시: %s\n7교시: %s"
                 % (data["class01"][:2], data["class02"][:2], data["class03"][:2], data["class04"][:2],
                    data["class05"][:2], data["class06"][:2], data["class07"][:2]))
-    else:
+    else:  # 월, 수, 금
         body = ("1교시: %s\n2교시: %s\n3교시: %s\n4교시: %s\n5교시: %s\n6교시: %s"
                 % (data["class01"][:2], data["class02"][:2], data["class03"][:2],
                    data["class04"][:2], data["class05"][:2], data["class06"][:2]))
@@ -164,42 +178,49 @@ class Date(Resource):
     def get(self, year, month, date):
         return meal_data(year, month, date)
 
+
 # Skill (Kakao i Open Builder) - 챗봇용
 class Skill(Resource):
-    def post(self):
-        return_simpleText = OrderedDict()
+    @staticmethod
+    def post():
+        return_simple_text = OrderedDict()
         return_outputs = OrderedDict()
         return_list = list()
         return_template = OrderedDict()
         return_data = OrderedDict()
-        def return_error():
-            return_simpleText["text"] = "오류가 발생했습니다."
-            return_outputs["simpleText"] = return_simpleText
+
+        def return_error():  # 오류 발생시 호출됨
+            # 스킬 응답용 JSON 생성
+            return_simple_text["text"] = "오류가 발생했습니다."
+            return_outputs["simpleText"] = return_simple_text
             if not return_outputs in return_list:
                 return_list.append(return_outputs)
             return_template["outputs"] = return_list
             return_data["version"] = "2.0"
             return_data["template"] = return_template
             return return_data
+
         sys_date = str()
         year = int()
         month = int()
         date = int()
         try:
-            sys_date = json.loads(json.loads(request.data)["action"]["params"]["sys_date"])["date"]
+            sys_date = json.loads(json.loads(request.data)["action"]["params"]["sys_date"])["date"]  # 날짜 가져오기
         except Exception:
             return_error()
         try:
+            # 년월일 파싱
             year = datetime.datetime.strptime(sys_date, "%Y-%m-%d").timetuple()[0]
             month = datetime.datetime.strptime(sys_date, "%Y-%m-%d").timetuple()[1]
             date = datetime.datetime.strptime(sys_date, "%Y-%m-%d").timetuple()[2]
-        except ValueError:
+        except ValueError:  # 파싱중 값오류 발생시
             return_error()
         meal = meal_data(year, month, date)
-        if not "message" in meal:
+        if not "message" in meal:  # 파서 메시지 있는지 확인, 없으면 만듦
             meal["message"] = "%s:\n\n%s\n\n열량: %s kcal" % (meal["date"], meal["menu"], meal["kcal"])
-        return_simpleText["text"] = meal["message"]
-        return_outputs["simpleText"] = return_simpleText
+        # 스킬 응답용 JSON 생성
+        return_simple_text["text"] = meal["message"]
+        return_outputs["simpleText"] = return_simple_text
         if not return_outputs in return_list:
             return_list.append(return_outputs)
         return_template["outputs"] = return_list
@@ -207,23 +228,28 @@ class Skill(Resource):
         return_data["template"] = return_template
         return return_data
 
+
 # Skill 특정날짜(고정값) 조회
 class SkillSpecificDate(Resource):
-    def post(self):
-        return_simpleText = OrderedDict()
+    @staticmethod
+    def post():
+        return_simple_text = OrderedDict()
         return_outputs = OrderedDict()
         return_list = list()
         return_template = OrderedDict()
         return_data = OrderedDict()
-        def return_error():
-            return_simpleText["text"] = "오류가 발생했습니다."
-            return_outputs["simpleText"] = return_simpleText
+
+        def return_error():  # 오류 발생시 호출됨
+            # 스킬 응답용 JSON 생성
+            return_simple_text["text"] = "오류가 발생했습니다."
+            return_outputs["simpleText"] = return_simple_text
             if not return_outputs in return_list:
                 return_list.append(return_outputs)
             return_template["outputs"] = return_list
             return_data["version"] = "2.0"
             return_data["template"] = return_template
             return return_data
+
         specific_date = str()
         year = int()
         month = int()
@@ -233,10 +259,11 @@ class SkillSpecificDate(Resource):
         except Exception:
             return_error()
         try:
+            # 년월일 파싱
             year = datetime.datetime.strptime(specific_date, "%Y-%m-%d").timetuple()[0]
             month = datetime.datetime.strptime(specific_date, "%Y-%m-%d").timetuple()[1]
             date = datetime.datetime.strptime(specific_date, "%Y-%m-%d").timetuple()[2]
-        except ValueError:
+        except ValueError:  # 값오류 발생시
             return_error()
         if isDebugging:
             print(specific_date)
@@ -244,10 +271,11 @@ class SkillSpecificDate(Resource):
             print(month)
             print(date)
         meal = meal_data(year, month, date)
-        if not "message" in meal:
+        if not "message" in meal:  # 파서 메시지 있는지 확인, 없으면 만듦
             meal["message"] = "%s:\n\n%s\n\n열량: %s kcal" % (meal["date"], meal["menu"], meal["kcal"])
-        return_simpleText["text"] = meal["message"]
-        return_outputs["simpleText"] = return_simpleText
+        # 스킬 응답용 JSON 생성
+        return_simple_text["text"] = meal["message"]
+        return_outputs["simpleText"] = return_simple_text
         if not return_outputs in return_list:
             return_list.append(return_outputs)
         return_template["outputs"] = return_list
@@ -255,50 +283,56 @@ class SkillSpecificDate(Resource):
         return_data["template"] = return_template
         return return_data
 
+
 # Skill 시간표 조회
 class Timetable(Resource):
-    def post(self):
-        return_simpleText = OrderedDict()
+    @staticmethod
+    def post():
+        return_simple_text = OrderedDict()
         return_outputs = OrderedDict()
         return_list = list()
         return_template = OrderedDict()
         return_data = OrderedDict()
-        def return_error():
-            return_simpleText["text"] = "오류가 발생했습니다."
-            return_outputs["simpleText"] = return_simpleText
+
+        def return_error():  # 오류 발생시 호출됨
+            # 스킬 응답용 JSON 생성
+            return_simple_text["text"] = "오류가 발생했습니다."
+            return_outputs["simpleText"] = return_simple_text
             if not return_outputs in return_list:
                 return_list.append(return_outputs)
             return_template["outputs"] = return_list
             return_data["version"] = "2.0"
             return_data["template"] = return_template
             return return_data
-        Grade = str()
-        Class = str()
+
+        tt_grade = str()
+        tt_class = str()
         sys_date = str()
-        Weekday = int()
+        tt_weekday = int()
         try:
-            Grade = json.loads(request.data)["action"]["params"]["Grade"]
+            tt_grade = json.loads(request.data)["action"]["params"]["Grade"]  # 학년 파싱
         except Exception:
             return_error()
         try:
-            Class = json.loads(request.data)["action"]["params"]["Class"]
+            tt_class = json.loads(request.data)["action"]["params"]["Class"]  # 반 파싱
         except Exception:
             return_error()
         try:
-            sys_date = json.loads(json.loads(request.data)["action"]["params"]["sys_date"])["date"]
+            sys_date = json.loads(json.loads(request.data)["action"]["params"]["sys_date"])["date"]  # 날짜 파싱
         except Exception:
             return_error()
         try:
-            Weekday = datetime.datetime.strptime(sys_date, "%Y-%m-%d").weekday()
-        except ValueError:
+            tt_weekday = datetime.datetime.strptime(sys_date, "%Y-%m-%d").weekday()  # 요일 파싱
+        except ValueError:  # 값오류 발생시
             return_error()
         if isDebugging:
-            print(Grade)
-            print(Class)
-            print(Weekday)
-        tt = timetable(Grade, Class, Weekday)
-        return_simpleText["text"] = tt
-        return_outputs["simpleText"] = return_simpleText
+            print(tt_grade)
+            print(tt_class)
+            print(tt_weekday)
+        tt = timetable(tt_grade, tt_class, tt_weekday)
+        # 스킬 응답용 JSON 생성
+        return_simple_text["text"] = tt
+        return_outputs["simpleText"] = return_simple_text
         if not return_outputs in return_list:
             return_list.append(return_outputs)
         return_template["outputs"] = return_list
@@ -306,9 +340,11 @@ class Timetable(Resource):
         return_data["template"] = return_template
         return return_data
 
+
 # 캐시 비우기
 class PurgeCache(Resource):
-    def get(self):
+    @staticmethod
+    def get():
         dict_data = OrderedDict()
         try:
             file_list = [file for file in os.listdir("data") if file.endswith(".json")]
@@ -322,7 +358,8 @@ class PurgeCache(Resource):
         dict_data["status"] = "OK"
         return dict_data
 
-# URL Router에 맵핑한다.(Rest URL정의)
+
+# URL Router에 맵핑.(Rest URL정의)
 api.add_resource(Date, '/date/<int:year>-<int:month>-<int:date>')
 api.add_resource(Skill, '/skill-gateway/')
 api.add_resource(SkillSpecificDate, '/skill-gateway/specificdate')
