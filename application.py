@@ -157,8 +157,8 @@ def timetable(tt_grade, tt_class, tt_weekday):
     json_data = json.loads(data)
 
     data = json_data["data"]["result"][tt_weekday]
-    # 헤더 작성. yyyy-mm-dd(요일): 형식
-    header = ("%s(%s):\n\n" % (data["date"].replace(".", "-"), data["day"].replace("요일", "")))
+    # 헤더 작성. n학년 n반, yyyy-mm-dd(요일): 형식
+    header = ("%s학년 %s반,\n%s(%s):\n\n" % (tt_grade, tt_class, data["date"].replace(".", "-"), data["day"].replace("요일", "")))
     if isDebugging:
         print(header)
     # 본문 작성
