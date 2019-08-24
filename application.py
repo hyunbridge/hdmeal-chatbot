@@ -15,6 +15,7 @@ import json
 from collections import OrderedDict
 from flask_restful import request, Api, Resource
 import re
+import html
 
 # 디버그용
 isDebugging = False
@@ -81,7 +82,7 @@ def parse(year, month, date):
         menu = str(menu[loc]).replace('<br/>', '.\n')  # 줄바꿈 처리
     except IndexError:
         return "IndexError"
-    menu = re.sub('<.+?>', '', menu).strip()  # 태그 처리
+    menu = html.unescape(re.sub('<.+?>', '', menu).strip())  # 태그 및 HTML 엔티티 처리
     if menu == "":
         return "NoData"
     for i in range(18):
