@@ -11,7 +11,7 @@ import datetime
 import json
 from collections import OrderedDict
 from flask_restful import request, Api, Resource
-from modules import getdata, purgecache
+from modules import getdata, purgecache, auth
 
 # 디버그용
 isDebugging = False
@@ -19,7 +19,6 @@ isDebugging = False
 today_year = 2019
 today_month = 7
 today_date = 14
-# 시간표에서 사용됨
 
 # Flask 인스턴스 생성
 app = Flask(__name__)
@@ -199,13 +198,73 @@ class PurgeCache(Resource):
     def get():
         return purgecache.purge(isDebugging)
 
+    @staticmethod
+    def post():
+        return_simple_text = OrderedDict()
+        return_outputs = OrderedDict()
+        return_list = list()
+        return_template = OrderedDict()
+        return_data = OrderedDict()
+
+        # 사용자 ID 가져오고 검증
+        uid = json.loads(request.data)["userRequest"]["user"]["id"]
+        if auth.check(uid):
+            if purgecache.purge(isDebugging)["status"] == "OK":  # 삭제 실행, 결과 검증
+                msg = "정상적으로 삭제되었습니다."
+            else:
+                msg = "삭제에 실패하였습니다. 오류가 발생했습니다."
+        else:
+            msg = "사용자 인증에 실패하였습니다."
+
+        # 스킬 응답용 JSON 생성
+        return_simple_text["text"] = msg
+        return_outputs["simpleText"] = return_simple_text
+        if not return_outputs in return_list:
+            return_list.append(return_outputs)
+        return_template["outputs"] = return_list
+        return_data["version"] = "2.0"
+        return_data["template"] = return_template
+        return return_data
+
+# 캐시 목록 보여주기
+class ListCache(Resource):
+    @staticmethod
+    def post():
+        return_simple_text = OrderedDict()
+        return_outputs = OrderedDict()
+        return_list = list()
+        return_template = OrderedDict()
+        return_data = OrderedDict()
+
+        # 사용자 ID 가져오고 검증
+        uid = json.loads(request.data)["userRequest"]["user"]["id"]
+        if auth.check(uid):
+            cache = getdata.cache(isDebugging)
+            if cache == "":
+                cache = "\n캐시가 없습니다."
+            msg = "캐시 목록:" + cache
+        else:
+            msg = "사용자 인증에 실패하였습니다."
+
+        # 스킬 응답용 JSON 생성
+        return_simple_text["text"] = msg
+        return_outputs["simpleText"] = return_simple_text
+        if not return_outputs in return_list:
+            return_list.append(return_outputs)
+        return_template["outputs"] = return_list
+        return_data["version"] = "2.0"
+        return_data["template"] = return_template
+        return return_data
+
+
 
 # URL Router에 맵핑.(Rest URL정의)
 api.add_resource(Date, '/date/<int:year>-<int:month>-<int:date>')
 api.add_resource(Skill, '/skill-gateway/')
 api.add_resource(SkillSpecificDate, '/skill-gateway/specificdate/')
 api.add_resource(Timetable, '/skill-gateway/tt/')
-api.add_resource(PurgeCache, '/purge/')
+api.add_resource(PurgeCache, '/cache/purge/')
+api.add_resource(ListCache, '/cache/list/')
 
 # 서버 실행
 if __name__ == '__main__':

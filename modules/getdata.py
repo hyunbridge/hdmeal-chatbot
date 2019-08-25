@@ -5,7 +5,7 @@
 # ██║  ██║██████╔╝██║ ╚═╝ ██║███████╗██║  ██║███████╗
 # ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
 # Copyright 2019, Hyungyo Seo
-# getdata.py - 급식, 시간표정보를 가져오는 스크립트입니다.
+# getdata.py - 급식, 시간표, 캐시정보를 가져오는 스크립트입니다.
 
 import os
 import urllib.request
@@ -72,3 +72,16 @@ def tt(tt_grade, tt_class, tt_weekday, isDebugging):
                 % (data["class01"][:2], data["class02"][:2], data["class03"][:2],
                    data["class04"][:2], data["class05"][:2], data["class06"][:2]))
     return header + body
+
+
+# 캐시정보 가져오기
+def cache(isDebugging):
+    filenames = os.listdir('data/cache/')
+    return_data = str()
+    for filename in filenames:
+        ext = os.path.splitext(filename)[-1]
+        if ext == '.json':
+            if isDebugging:
+                print(filename)
+            return_data = "%s\n%s" % (return_data, filename.replace(".json", ""))
+    return return_data
