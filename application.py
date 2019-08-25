@@ -244,7 +244,7 @@ class ListCache(Resource):
                 cache = "\n캐시가 없습니다."
             msg = "캐시 목록:" + cache
         else:
-            msg = "사용자 인증에 실패하였습니다.\n 당신의 UID는 %s 입니다." % uid
+            msg = "사용자 인증에 실패하였습니다.\n당신의 UID는 %s 입니다." % uid
 
         # 스킬 응답용 JSON 생성
         return_simple_text["text"] = msg
