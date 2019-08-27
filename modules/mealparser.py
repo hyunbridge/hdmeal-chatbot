@@ -87,8 +87,7 @@ def parse(year, month, date, isDebugging):
     if isDebugging:
         print(return_data)
 
-    with open(
-            'data/cache/' + date[:10] + '.json', 'w',
+    with open('data/cache/' + date[:10] + '.json', 'w',
             encoding="utf-8") as make_file:
         json.dump(return_data, make_file, ensure_ascii=False, indent="\t")
         print("File Created")
