@@ -5,11 +5,12 @@
 # ██║  ██║██████╔╝██║ ╚═╝ ██║███████╗██║  ██║███████╗
 # ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
 # Copyright 2019, Hyungyo Seo
-# purgecache.py - 캐시를 비우는 스크립트입니다.
+# cache.py - 캐시를 관리하는 스크립트입니다.
 
 import os
 from collections import OrderedDict
 
+# 캐시 비우기
 def purge(isDebugging):
     dict_data = OrderedDict()
     try:
@@ -23,3 +24,15 @@ def purge(isDebugging):
         return dict_data
     dict_data["status"] = "OK"
     return dict_data
+
+# 캐시정보 가져오기
+def get(isDebugging):
+    filenames = os.listdir('data/cache/')
+    return_data = str()
+    for filename in filenames:
+        ext = os.path.splitext(filename)[-1]
+        if ext == '.json':
+            if isDebugging:
+                print(filename)
+            return_data = "%s\n%s" % (return_data, filename.replace(".json", ""))
+    return return_data
