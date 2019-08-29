@@ -143,26 +143,26 @@ def tt_registered(reqdata, isDebugging):
     except Exception:
         return_error()
 
-    try:
-        sys_date = json.loads(json.loads(reqdata)["action"]["params"]["sys_date"])["date"]  # 날짜 파싱
-    except Exception:
-        return_error()
-    try:
-        tt_weekday = datetime.datetime.strptime(sys_date, "%Y-%m-%d").weekday()  # 요일 파싱
-    except ValueError:  # 값오류 발생시
-        return_error()
-    if isDebugging:
-        print(tt_grade)
-        print(tt_class)
-        print(tt_weekday)
+    if tt_grade != "" or tt_class != "":
+        try:
+            sys_date = json.loads(json.loads(reqdata)["action"]["params"]["sys_date"])["date"]  # 날짜 파싱
+        except Exception:
+            return_error()
+        try:
+            tt_weekday = datetime.datetime.strptime(sys_date, "%Y-%m-%d").weekday()  # 요일 파싱
+        except ValueError:  # 값오류 발생시
+            return_error()
+        if isDebugging:
+            print(tt_grade)
+            print(tt_class)
+            print(tt_weekday)
 
-    tt = str()
-    try:
-        tt = getdata.tt(tt_grade, tt_class, tt_weekday, isDebugging)
-    except TypeError:
-        tt = "미등록 사용자입니다.\n먼저 사용자 등록을 해 주시기 바랍니다."
+        msg = getdata.tt(tt_grade, tt_class, tt_weekday, isDebugging)
+    else:
+        msg = "미등록 사용자입니다.\n먼저 사용자 등록을 해 주시기 바랍니다."
+
     # 스킬 응답용 JSON 생성
-    return_simple_text["text"] = tt
+    return_simple_text["text"] = msg
     return_outputs["simpleText"] = return_simple_text
     if not return_outputs in return_list:
         return_list.append(return_outputs)
@@ -214,9 +214,9 @@ def tt(reqdata, isDebugging):
         print(tt_grade)
         print(tt_class)
         print(tt_weekday)
-    tt = getdata.tt(tt_grade, tt_class, tt_weekday, isDebugging)
+    msg = getdata.tt(tt_grade, tt_class, tt_weekday, isDebugging)
     # 스킬 응답용 JSON 생성
-    return_simple_text["text"] = tt
+    return_simple_text["text"] = msg
     return_outputs["simpleText"] = return_simple_text
     if not return_outputs in return_list:
         return_list.append(return_outputs)
