@@ -65,11 +65,11 @@ def tt(tt_grade, tt_class, tt_weekday, isDebugging):
     # 본문 작성
     if tt_weekday == 1 or tt_weekday == 3:  # 화, 목
         body = ("1교시: %s\n2교시: %s\n3교시: %s\n4교시: %s\n5교시: %s\n6교시: %s\n7교시: %s"
-                % (data["class01"][:2], data["class02"][:2], data["class03"][:2], data["class04"][:2],
-                   data["class05"][:2], data["class06"][:2], data["class07"][:2]))
+                % (data["class01"], data["class02"], data["class03"], data["class04"],
+                   data["class05"], data["class06"], data["class07"]))
     else:  # 월, 수, 금
         body = ("1교시: %s\n2교시: %s\n3교시: %s\n4교시: %s\n5교시: %s\n6교시: %s"
-                % (data["class01"][:2], data["class02"][:2], data["class03"][:2],
-                   data["class04"][:2], data["class05"][:2], data["class06"][:2]))
+                % (data["class01"], data["class02"], data["class03"],
+                   data["class04"], data["class05"], data["class06"]))
     return header + body
 
