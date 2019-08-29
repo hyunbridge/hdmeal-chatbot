@@ -91,4 +91,3 @@ ENV/
 .idea/
 bak/
 .vs/
-data/user/user.json
