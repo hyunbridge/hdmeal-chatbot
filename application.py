@@ -27,16 +27,17 @@ class Date(Resource):
         return getdata.meal(year, month, date, isDebugging)
 
 # Skill 식단 조회
-class Skill(Resource):
+class Meal(Resource):
     @staticmethod
     def post():
         return skill.meal(request.data, isDebugging)
 
 # Skill 특정날짜(고정값) 식단 조회
-class SkillSpecificDate(Resource):
+class MealSpecificDate(Resource):
     @staticmethod
     def post():
         return skill.meal_specific_date(request.data, isDebugging)
+
 
 # Skill 시간표 조회 (등록 사용자용)
 class TimetableRegistered(Resource):
@@ -63,6 +64,7 @@ class ListCache(Resource):
     def post():
         return skill.get_cache(request.data, isDebugging)
 
+
 # 사용자 관리
 class ManageUser(Resource):
     @staticmethod
@@ -76,16 +78,24 @@ class DeleteUser(Resource):
         return skill.delete_user(request.data, isDebugging)
 
 
+# 한강 수온 조회
+class WTemp(Resource):
+    @staticmethod
+    def post():
+        return skill.wtemp(isDebugging)
+
+
 # URL Router에 맵핑.(Rest URL정의)
 api.add_resource(Date, '/date/<int:year>-<int:month>-<int:date>')
-api.add_resource(Skill, '/skill-gateway/')
-api.add_resource(SkillSpecificDate, '/skill-gateway/specificdate/')
-api.add_resource(TimetableRegistered, '/skill-gateway/tt/registered/')
-api.add_resource(Timetable, '/skill-gateway/tt/')
-api.add_resource(PurgeCache, '/cache/purge/')
+api.add_resource(Meal, '/meal/')
+api.add_resource(MealSpecificDate, '/meal/specificdate/')
+api.add_resource(Timetable, '/tt/')
+api.add_resource(TimetableRegistered, '/tt/registered/')
 api.add_resource(ListCache, '/cache/list/')
+api.add_resource(PurgeCache, '/cache/purge/')
 api.add_resource(ManageUser, '/user/manage/')
 api.add_resource(DeleteUser, '/user/delete/')
+api.add_resource(WTemp, '/wtemp/')
 
 # 서버 실행
 if __name__ == '__main__':
