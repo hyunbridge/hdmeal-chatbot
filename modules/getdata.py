@@ -11,7 +11,7 @@ import os
 import urllib.request
 import json
 from collections import OrderedDict
-from modules import mealparser
+from modules import mealparser, wtemparser
 
 # 급식정보 가져오기
 def meal(year, month, date, isDebugging):
@@ -73,3 +73,8 @@ def tt(tt_grade, tt_class, tt_weekday, isDebugging):
                    data["class04"], data["class05"], data["class06"]))
     return header + body
 
+# 한강 수온 가져오기
+def wtemp(isDebugging):
+    data = wtemparser.get(isDebugging)
+    body = "%s %s 측정자료:\n한강 수온은 %s°C 입니다." % (data[0], data[1], data[2])
+    return body

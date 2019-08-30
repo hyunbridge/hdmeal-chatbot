@@ -381,3 +381,22 @@ def delete_user(reqdata, isDebugging):
     return_data["version"] = "2.0"
     return_data["template"] = return_template
     return return_data
+
+
+# 한강 수온 조회
+def wtemp(isDebugging):
+    return_simple_text = OrderedDict()
+    return_outputs = OrderedDict()
+    return_list = list()
+    return_template = OrderedDict()
+    return_data = OrderedDict()
+
+    # 스킬 응답용 JSON 생성
+    return_simple_text["text"] = getdata.wtemp(isDebugging)
+    return_outputs["simpleText"] = return_simple_text
+    if not return_outputs in return_list:
+        return_list.append(return_outputs)
+    return_template["outputs"] = return_list
+    return_data["version"] = "2.0"
+    return_data["template"] = return_template
+    return return_data
