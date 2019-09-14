@@ -8,7 +8,7 @@
 
 from flask import Flask
 from flask_restful import request, Api, Resource
-from modules import getdata, skill, user
+from modules import getdata, skill
 
 # 디버그용
 isDebugging = False
