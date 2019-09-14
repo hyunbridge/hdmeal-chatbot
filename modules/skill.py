@@ -143,7 +143,7 @@ def tt_registered(reqdata, isDebugging):
     except Exception:
         return_error()
 
-    if tt_grade is not None or tt_class is not None:
+    if tt_grade != "" or tt_class != "":
         try:
             sys_date = json.loads(json.loads(reqdata)["action"]["params"]["sys_date"])["date"]  # 날짜 파싱
         except Exception:
@@ -322,14 +322,8 @@ def manage_user(reqdata, isDebugging):
         print(user_class)
         print(uid)
 
-    req = user.manage_user(uid, user_grade, user_class, isDebugging)
-
-    if req == "Created":
+    if user.manage_user(uid, user_grade, user_class, isDebugging):
         msg = "등록에 성공했습니다."
-    elif req == "Same":
-        msg = "저장된 정보와 수정할 정보가 같아 수정하지 않았습니다."
-    elif req == "Updated":
-        msg = "수정되었습니다."
     else:
         return_error()
 
@@ -373,11 +367,7 @@ def delete_user(reqdata, isDebugging):
     if isDebugging:
         print(uid)
 
-    req = user.delete_user(uid, isDebugging)
-
-    if req == "NotExist":
-        msg = "존재하지 않는 사용자입니다."
-    elif req == "Deleted":
+    if user.delete_user(uid, isDebugging):
         msg = "삭제에 성공했습니다."
     else:
         return_error()
