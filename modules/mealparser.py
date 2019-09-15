@@ -14,7 +14,8 @@ from collections import OrderedDict
 import re
 import html
 
-def parse(year, month, date, isDebugging):
+
+def parse(year, month, date, debugging):
     year = str(year).zfill(2)
     month = str(month).zfill(2)
     date = str(date).zfill(2)
@@ -27,7 +28,7 @@ def parse(year, month, date, isDebugging):
                                      "&schMmealScCode=2"
                                      "&schYmd=%s.%s.%s" % (year, month, date))
     except Exception as error:
-        if isDebugging:
+        if debugging:
             print(error)
         return error
     data = BeautifulSoup(url, 'html.parser')
@@ -41,7 +42,7 @@ def parse(year, month, date, isDebugging):
             if year.zfill(4) + "." + month.zfill(2) + "." + date.zfill(2) in str(raw_date[i]):
                 loc = i - 1
                 date = raw_date[i].get_text().strip().replace(".", "-")
-                if isDebugging:
+                if debugging:
                     print(loc)
                     print(date)
     except IndexError:
@@ -70,13 +71,13 @@ def parse(year, month, date, isDebugging):
         return "NoData"
     for i in range(18):
         menu = menu.replace(allergy_filter[i], allergy_string[i])
-    if isDebugging:
+    if debugging:
         print(menu)
 
     # 칼로리 파싱
     kcal = data[45].find_all("td")
     kcal = kcal[loc].get_text().strip()
-    if isDebugging:
+    if debugging:
         print(kcal)
 
     # 반환값 생성
@@ -84,11 +85,11 @@ def parse(year, month, date, isDebugging):
     return_data["date"] = date
     return_data["menu"] = menu
     return_data["kcal"] = kcal
-    if isDebugging:
+    if debugging:
         print(return_data)
 
     with open('data/cache/' + date[:10] + '.json', 'w',
-            encoding="utf-8") as make_file:
+              encoding="utf-8") as make_file:
         json.dump(return_data, make_file, ensure_ascii=False, indent="\t")
         print("File Created")
 

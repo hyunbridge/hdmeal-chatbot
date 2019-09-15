@@ -12,8 +12,9 @@ import json
 from collections import OrderedDict
 from modules import getdata, cache, user
 
+
 # Skill 식단 조회
-def meal(reqdata, isDebugging):
+def meal(reqdata, debugging):
     return_simple_text = OrderedDict()
     return_outputs = OrderedDict()
     return_list = list()
@@ -46,7 +47,7 @@ def meal(reqdata, isDebugging):
         date = datetime.datetime.strptime(sys_date, "%Y-%m-%d").timetuple()[2]
     except ValueError:  # 파싱중 값오류 발생시
         return_error()
-    meal = getdata.meal(year, month, date, isDebugging)
+    meal = getdata.meal(year, month, date, debugging)
     if not "message" in meal:  # 파서 메시지 있는지 확인, 없으면 만듦
         meal["message"] = "%s:\n\n%s\n\n열량: %s kcal" % (meal["date"], meal["menu"], meal["kcal"])
     # 스킬 응답용 JSON 생성
@@ -59,8 +60,9 @@ def meal(reqdata, isDebugging):
     return_data["template"] = return_template
     return return_data
 
+
 # Skill 특정날짜(고정값) 식단 조회
-def meal_specific_date(reqdata, isDebugging):
+def meal_specific_date(reqdata, debugging):
     return_simple_text = OrderedDict()
     return_outputs = OrderedDict()
     return_list = list()
@@ -93,12 +95,12 @@ def meal_specific_date(reqdata, isDebugging):
         date = datetime.datetime.strptime(specific_date, "%Y-%m-%d").timetuple()[2]
     except ValueError:  # 값오류 발생시
         return_error()
-    if isDebugging:
+    if debugging:
         print(specific_date)
         print(year)
         print(month)
         print(date)
-    meal = getdata.meal(year, month, date, isDebugging)
+    meal = getdata.meal(year, month, date, debugging)
     if not "message" in meal:  # 파서 메시지 있는지 확인, 없으면 만듦
         meal["message"] = "%s:\n\n%s\n\n열량: %s kcal" % (meal["date"], meal["menu"], meal["kcal"])
     # 스킬 응답용 JSON 생성
@@ -111,8 +113,9 @@ def meal_specific_date(reqdata, isDebugging):
     return_data["template"] = return_template
     return return_data
 
+
 # Skill 시간표 조회 (등록 사용자용)
-def tt_registered(reqdata, isDebugging):
+def tt_registered(reqdata, debugging):
     return_simple_text = OrderedDict()
     return_outputs = OrderedDict()
     return_list = list()
@@ -130,20 +133,19 @@ def tt_registered(reqdata, isDebugging):
         return_data["template"] = return_template
         return return_data
 
-
     tt_grade = str()
     tt_class = str()
     sys_date = str()
     tt_weekday = int()
     try:
         uid = json.loads(reqdata)["userRequest"]["user"]["id"]
-        user_data = user.get_user(uid, isDebugging) # 사용자 정보 불러오기
+        user_data = user.get_user(uid, debugging)  # 사용자 정보 불러오기
         tt_grade = user_data[0]
         tt_class = user_data[1]
     except Exception:
         return_error()
 
-    if tt_grade != "" or tt_class != "":
+    if tt_grade is not None or tt_class is not None:  # 사용자 정보 있을 때
         try:
             sys_date = json.loads(json.loads(reqdata)["action"]["params"]["sys_date"])["date"]  # 날짜 파싱
         except Exception:
@@ -152,12 +154,12 @@ def tt_registered(reqdata, isDebugging):
             tt_weekday = datetime.datetime.strptime(sys_date, "%Y-%m-%d").weekday()  # 요일 파싱
         except ValueError:  # 값오류 발생시
             return_error()
-        if isDebugging:
+        if debugging:
             print(tt_grade)
             print(tt_class)
             print(tt_weekday)
 
-        msg = getdata.tt(tt_grade, tt_class, tt_weekday, isDebugging)
+        msg = getdata.tt(tt_grade, tt_class, tt_weekday, debugging)
     else:
         msg = "미등록 사용자입니다.\n먼저 사용자 등록을 해 주시기 바랍니다."
 
@@ -171,8 +173,9 @@ def tt_registered(reqdata, isDebugging):
     return_data["template"] = return_template
     return return_data
 
+
 # Skill 시간표 조회 (미등록 사용자용)
-def tt(reqdata, isDebugging):
+def tt(reqdata, debugging):
     return_simple_text = OrderedDict()
     return_outputs = OrderedDict()
     return_list = list()
@@ -210,11 +213,11 @@ def tt(reqdata, isDebugging):
         tt_weekday = datetime.datetime.strptime(sys_date, "%Y-%m-%d").weekday()  # 요일 파싱
     except ValueError:  # 값오류 발생시
         return_error()
-    if isDebugging:
+    if debugging:
         print(tt_grade)
         print(tt_class)
         print(tt_weekday)
-    msg = getdata.tt(tt_grade, tt_class, tt_weekday, isDebugging)
+    msg = getdata.tt(tt_grade, tt_class, tt_weekday, debugging)
     # 스킬 응답용 JSON 생성
     return_simple_text["text"] = msg
     return_outputs["simpleText"] = return_simple_text
@@ -227,7 +230,7 @@ def tt(reqdata, isDebugging):
 
 
 # 캐시 가져오기
-def get_cache(reqdata, isDebugging):
+def get_cache(reqdata, debugging):
     return_simple_text = OrderedDict()
     return_outputs = OrderedDict()
     return_list = list()
@@ -236,8 +239,8 @@ def get_cache(reqdata, isDebugging):
 
     # 사용자 ID 가져오고 검증
     uid = json.loads(reqdata)["userRequest"]["user"]["id"]
-    if user.auth_admin(uid, isDebugging):
-        cache_list = cache.get(isDebugging)
+    if user.auth_admin(uid, debugging):
+        cache_list = cache.get(debugging)
         if cache_list == "":
             cache_list = "\n캐시가 없습니다."
         msg = "캐시 목록:" + cache_list
@@ -254,8 +257,9 @@ def get_cache(reqdata, isDebugging):
     return_data["template"] = return_template
     return return_data
 
+
 # 캐시 비우기
-def purge_cache(reqdata, isDebugging):
+def purge_cache(reqdata, debugging):
     return_simple_text = OrderedDict()
     return_outputs = OrderedDict()
     return_list = list()
@@ -263,8 +267,8 @@ def purge_cache(reqdata, isDebugging):
     return_data = OrderedDict()
     # 사용자 ID 가져오고 검증
     uid = json.loads(reqdata)["userRequest"]["user"]["id"]
-    if user.auth_admin(uid, isDebugging):
-        if cache.purge(isDebugging)["status"] == "OK":  # 삭제 실행, 결과 검증
+    if user.auth_admin(uid, debugging):
+        if cache.purge(debugging)["status"] == "OK":  # 삭제 실행, 결과 검증
             msg = "캐시를 비웠습니다."
         else:
             msg = "삭제에 실패하였습니다. 오류가 발생했습니다."
@@ -282,7 +286,7 @@ def purge_cache(reqdata, isDebugging):
 
 
 # 사용자 관리
-def manage_user(reqdata, isDebugging):
+def manage_user(reqdata, debugging):
     return_simple_text = OrderedDict()
     return_outputs = OrderedDict()
     return_list = list()
@@ -317,13 +321,19 @@ def manage_user(reqdata, isDebugging):
     except Exception:
         return_error()
 
-    if isDebugging:
+    if debugging:
         print(user_grade)
         print(user_class)
         print(uid)
 
-    if user.manage_user(uid, user_grade, user_class, isDebugging):
+    req = user.manage_user(uid, user_grade, user_class, debugging)
+
+    if req == "Created":
         msg = "등록에 성공했습니다."
+    elif req == "Same":
+        msg = "저장된 정보와 수정할 정보가 같아 수정하지 않았습니다."
+    elif req == "Updated":
+        msg = "수정되었습니다."
     else:
         return_error()
 
@@ -337,8 +347,9 @@ def manage_user(reqdata, isDebugging):
     return_data["template"] = return_template
     return return_data
 
+
 # 사용자 삭제
-def delete_user(reqdata, isDebugging):
+def delete_user(reqdata, debugging):
     return_simple_text = OrderedDict()
     return_outputs = OrderedDict()
     return_list = list()
@@ -364,10 +375,14 @@ def delete_user(reqdata, isDebugging):
     except Exception:
         return_error()
 
-    if isDebugging:
+    if debugging:
         print(uid)
 
-    if user.delete_user(uid, isDebugging):
+    req = user.delete_user(uid, debugging)
+
+    if req == "NotExist":
+        msg = "존재하지 않는 사용자입니다."
+    elif req == "Deleted":
         msg = "삭제에 성공했습니다."
     else:
         return_error()
@@ -384,7 +399,7 @@ def delete_user(reqdata, isDebugging):
 
 
 # 한강 수온 조회
-def wtemp(isDebugging):
+def wtemp(debugging):
     return_simple_text = OrderedDict()
     return_outputs = OrderedDict()
     return_list = list()
@@ -392,7 +407,7 @@ def wtemp(isDebugging):
     return_data = OrderedDict()
 
     # 스킬 응답용 JSON 생성
-    return_simple_text["text"] = getdata.wtemp(isDebugging)
+    return_simple_text["text"] = getdata.wtemp(debugging)
     return_outputs["simpleText"] = return_simple_text
     if not return_outputs in return_list:
         return_list.append(return_outputs)
