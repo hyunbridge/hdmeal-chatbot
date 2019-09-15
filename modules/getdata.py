@@ -14,14 +14,14 @@ from collections import OrderedDict
 from modules import mealparser, wtemparser
 
 # 급식정보 가져오기
-def meal(year, month, date, isDebugging):
+def meal(year, month, date, debugging):
     # 자료형 변환
     year = str(year)
     month = str(month)
     date = str(date)
 
     if not os.path.isfile('data/cache/' + year.zfill(4) + '-' + month.zfill(2) + '-' + date.zfill(2) + '.json'):
-        mealparser.parse(year, month, date, isDebugging)
+        mealparser.parse(year, month, date, debugging)
 
     json_data = OrderedDict()
     try:
@@ -30,14 +30,14 @@ def meal(year, month, date, isDebugging):
             data = json.load(data_file, object_pairs_hook=OrderedDict)
             json_data = data
     except FileNotFoundError:  # 파일 없을때
-        if isDebugging:
+        if debugging:
             print("FileNotFound")
         json_data["message"] = "등록된 데이터가 없습니다."
     return json_data
 
 
 # 시간표정보 가져오기
-def tt(tt_grade, tt_class, tt_weekday, isDebugging):
+def tt(tt_grade, tt_class, tt_weekday, debugging):
     # Github Juneyoung-Kang님의 KoreanSchoolAPI 사용
     # https://github.com/Juneyoung-Kang/koreanschoolapi
 
@@ -49,7 +49,7 @@ def tt(tt_grade, tt_class, tt_weekday, isDebugging):
                                      "?schoolName=%ED%9D%A5%EB%8D%95%EC%A4%91%ED%95%99%EA%B5%90"
                                      "&gradeNumber=" + tt_grade + "&classNumber=" + tt_class + "&resultType=week")
     except Exception:
-        if isDebugging:
+        if debugging:
             print("오류")
         return ""
 
@@ -60,7 +60,7 @@ def tt(tt_grade, tt_class, tt_weekday, isDebugging):
     data = json_data["data"]["result"][tt_weekday]
     # 헤더 작성. n학년 n반, yyyy-mm-dd(요일): 형식
     header = ("%s학년 %s반,\n%s(%s):\n\n" % (tt_grade, tt_class, data["date"].replace(".", "-"), data["day"].replace("요일", "")))
-    if isDebugging:
+    if debugging:
         print(header)
     # 본문 작성
     if tt_weekday == 1 or tt_weekday == 3:  # 화, 목
@@ -74,7 +74,10 @@ def tt(tt_grade, tt_class, tt_weekday, isDebugging):
     return header + body
 
 # 한강 수온 가져오기
-def wtemp(isDebugging):
-    data = wtemparser.get(isDebugging)
-    body = "%s %s 측정자료:\n한강 수온은 %s°C 입니다." % (data[0], data[1], data[2])
+def wtemp(debugging):
+    try:
+        data = wtemparser.get(debugging)
+        body = "%s %s 측정자료:\n한강 수온은 %s°C 입니다." % (data[0], data[1], data[2])
+    except Exception:
+        body = "측정소 또는 서버 오류입니다."
     return body

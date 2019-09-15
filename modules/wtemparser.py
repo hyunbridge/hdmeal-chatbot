@@ -10,11 +10,11 @@
 import urllib.request
 from bs4 import BeautifulSoup
 
-def get(isDebugging):
+def get(debugging):
     try:
         url = urllib.request.urlopen("http://koreawqi.go.kr/wQSCHomeLayout_D.wq?action_type=T")
     except Exception as error:
-        if isDebugging:
+        if debugging:
             print(error)
         return error
     data = BeautifulSoup(url, 'html.parser')
