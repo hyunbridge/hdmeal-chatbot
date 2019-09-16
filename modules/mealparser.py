@@ -34,7 +34,7 @@ def parse(year, month, date, debugging):
     data = BeautifulSoup(url, 'html.parser')
     data = data.find_all("tr")
 
-    # 날싸 파싱
+    # 날짜 파싱
     loc = int()
     raw_date = data[0].find_all("th")
     try:
@@ -74,6 +74,22 @@ def parse(year, month, date, debugging):
     if debugging:
         print(menu)
 
+    # 맛있는 메뉴 표시
+    delicious = ['훈제', '마요', '미트볼', '우동', '망고', '샌드위치', '피자', '햄버거', '까스', '브라운', '핫바',
+                 '튀김', '스파게티', '빵', '파이', '떡', '와플', '바나나', '맛탕', '바베큐', '떡갈비', '비엔나',
+                 '브라우니', '치킨', '타코야끼', '도넛', '치즈', '핫도그', '스프', '소세지', '메론', '파인애플',
+                 '샐러드', '불고기', '햄', '쥬스']
+    split = menu.split("\n")  # 메뉴 라인별로 나누기
+    meal = str()
+    global line
+    for line in split:  # 라인별로 반복작업
+        for keyword in delicious:
+            if keyword in line:
+                line = "⭐" + line  # 별 덧붙이기
+                break
+        meal = "%s\n%s" % (meal, line)  # meal에 추가
+    meal = meal[1:]  # 맨 처음 줄바꿈 제거
+
     # 칼로리 파싱
     kcal = data[45].find_all("td")
     kcal = kcal[loc].get_text().strip()
@@ -83,7 +99,7 @@ def parse(year, month, date, debugging):
     # 반환값 생성
     return_data = OrderedDict()
     return_data["date"] = date
-    return_data["menu"] = menu
+    return_data["menu"] = meal
     return_data["kcal"] = kcal
     if debugging:
         print(return_data)
@@ -94,3 +110,7 @@ def parse(year, month, date, debugging):
         print("File Created")
 
     return 0
+
+# 디버그
+if __name__ == "__main__":
+    parse(2019, 9, 11, True)
