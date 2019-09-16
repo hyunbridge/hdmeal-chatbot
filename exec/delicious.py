@@ -11,7 +11,8 @@ file = open("../data/delicious.txt", 'r', encoding="utf-8")
 menu = list()
 while True:
     line = file.readline()
-    if not line: break
+    if not line:
+        break
     menu.append(line.replace("\n", ""))
 file.close()
 print(menu)
