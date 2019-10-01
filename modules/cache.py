@@ -5,7 +5,7 @@
 # ██║  ██║██████╔╝██║ ╚═╝ ██║███████╗██║  ██║███████╗
 # ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
 # Copyright 2019, Hyungyo Seo
-# cache.py - 캐시를 관리하는 스크립트입니다.
+# modules/cache.py - 캐시를 관리하는 스크립트입니다.
 
 import os
 from collections import OrderedDict

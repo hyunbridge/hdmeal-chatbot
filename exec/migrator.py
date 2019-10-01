@@ -5,7 +5,7 @@
 # ██║  ██║██████╔╝██║ ╚═╝ ██║███████╗██║  ██║███████╗
 # ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
 # Copyright 2019, Hyungyo Seo
-# migrator.py - json 파일에 저장된 사용자 정보를 SQLite DB로 옮겨 주는 스크립트입니다.
+# exec/migrator.py - json 파일에 저장된 사용자 정보를 SQLite DB로 옮겨 주는 스크립트입니다.
 
 import json
 import sqlite3
