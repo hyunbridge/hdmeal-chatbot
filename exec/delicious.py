@@ -5,7 +5,7 @@
 # ██║  ██║██████╔╝██║ ╚═╝ ██║███████╗██║  ██║███████╗
 # ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
 # Copyright 2019, Hyungyo Seo
-# delicious.py - delicious.txt에서 키워드를 읽어와 list형으로 변환해주는 스크립트입니다.
+# exec/delicious.py - delicious.txt에서 키워드를 읽어와 list형으로 변환해주는 스크립트입니다.
 
 keyword = list()
 with open("../data/delicious.txt", 'r', encoding="utf-8") as file:

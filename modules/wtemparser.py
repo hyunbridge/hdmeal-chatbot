@@ -5,7 +5,7 @@
 # ██║  ██║██████╔╝██║ ╚═╝ ██║███████╗██║  ██║███████╗
 # ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
 # Copyright 2019, Hyungyo Seo
-# wtemparser.py - 실시간수질정보시스템 서버에 접속하여 수온정보를 파싱해오는 스크립트입니다.
+# modules/wtemparser.py - 실시간수질정보시스템 서버에 접속하여 수온정보를 파싱해오는 스크립트입니다.
 
 import urllib.request
 from bs4 import BeautifulSoup

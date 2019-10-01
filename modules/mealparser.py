@@ -5,7 +5,7 @@
 # ██║  ██║██████╔╝██║ ╚═╝ ██║███████╗██║  ██║███████╗
 # ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
 # Copyright 2019, Hyungyo Seo
-# mealparser.py - NEIS 서버에 접속하여 급식정보를 파싱해오는 스크립트입니다.
+# modules/mealparser.py - NEIS 서버에 접속하여 급식정보를 파싱해오는 스크립트입니다.
 
 import urllib.request
 from bs4 import BeautifulSoup

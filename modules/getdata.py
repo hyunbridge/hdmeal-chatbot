@@ -5,27 +5,27 @@
 # ██║  ██║██████╔╝██║ ╚═╝ ██║███████╗██║  ██║███████╗
 # ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
 # Copyright 2019, Hyungyo Seo
-# getdata.py - 급식, 시간표, 캐시정보를 가져오는 스크립트입니다.
+# modules/getdata.py - 급식, 시간표, 캐시정보를 가져오는 스크립트입니다.
 
 import os
 import urllib.request
 import json
 from collections import OrderedDict
-from modules import mealparser, wtemparser
+from modules import mealparser, calendarparser, wtemparser
 
 # 급식정보 가져오기
 def meal(year, month, date, debugging):
     # 자료형 변환
-    year = str(year)
-    month = str(month)
-    date = str(date)
+    year = str(year).zfill(4)
+    month = str(month).zfill(2)
+    date = str(date).zfill(2)
 
-    if not os.path.isfile('data/cache/' + year.zfill(4) + '-' + month.zfill(2) + '-' + date.zfill(2) + '.json'):
+    if not os.path.isfile('data/cache/' + year + '-' + month + '-' + date + '.json'):
         mealparser.parse(year, month, date, debugging)
 
     json_data = OrderedDict()
     try:
-        with open('data/cache/' + year.zfill(4) + '-' + month.zfill(2) + '-' + date.zfill(2) + '.json',
+        with open('data/cache/' + year + '-' + month + '-' + date + '.json',
                   encoding="utf-8") as data_file:
             data = json.load(data_file, object_pairs_hook=OrderedDict)
             json_data = data
@@ -73,6 +73,34 @@ def tt(tt_grade, tt_class, tt_weekday, debugging):
                    data["class04"], data["class05"], data["class06"]))
     return header + body
 
+
+# 학사일정 가져오기
+def cal(year, month, date, debugging):
+    # 자료형 변환
+    year = str(year).zfill(2)
+    month = str(month).zfill(2)
+    date = str(date).zfill(2)
+
+    # 파일 없으면 생성
+    if not os.path.isfile('data/cache/Cal-%s-%s.json' % (year, month)):
+        calendarparser.parse(year, month, debugging)
+
+    try:
+        with open('data/cache/Cal-%s-%s.json' % (year, month),
+                  encoding="utf-8") as data_file:
+            data = json.load(data_file, object_pairs_hook=OrderedDict)
+            json_data = data
+    except FileNotFoundError:  # 파일 없을때
+        if debugging:
+            print("FileNotFound")
+        return "일정이 없습니다."
+
+    # 일정 있는지 확인
+    if date in json_data:
+        return json_data[date]
+    return "일정이 없습니다."
+
+
 # 한강 수온 가져오기
 def wtemp(debugging):
     try:
@@ -81,3 +109,8 @@ def wtemp(debugging):
     except Exception:
         body = "측정소 또는 서버 오류입니다."
     return body
+
+
+# 디버그
+if __name__ == "__main__":
+    print(cal(2019, 9, 30, True))
