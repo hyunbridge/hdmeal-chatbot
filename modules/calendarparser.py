@@ -41,9 +41,9 @@ def parse(year, month, debugging):
     calendar = dict()
 
     for i in range(len(data)):
-        string = data[i].get_text().replace('\n', '')
-        if string[2:]:
-            calendar[string[:2]] = string[2:]
+        string = data[i].get_text().strip()
+        if string[2:].replace('\n', ''):
+            calendar[string[:2]] = string[2:].strip().replace('\n\n\n', '\n')
 
     if debugging:
         print(calendar)
@@ -58,4 +58,4 @@ def parse(year, month, debugging):
 
 # 디버그
 if __name__ == "__main__":
-    parse(2019, 10, True)
+    parse(2019, 8, True)
