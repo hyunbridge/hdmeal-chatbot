@@ -183,7 +183,7 @@ def cal(reqdata, debugging):
         date = start + datetime.timedelta(days=i)
         calendar = getdata.cal(date.year, date.month, date.day, debugging)
         calendar = calendar.replace("일정이 없습니다.", "").replace("토요휴업일", "").replace("여름방학", "")\
-                           .replace("겨울방학", "")
+                           .replace("겨울방학", "").strip()
         if calendar:
             if date.weekday() == 0:
                 weekday = "월"
