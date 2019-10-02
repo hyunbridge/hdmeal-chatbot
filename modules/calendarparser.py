@@ -16,7 +16,7 @@ import html
 
 
 def parse(year, month, debugging):
-    year = str(year).zfill(2)
+    year = str(year).zfill(4)
     month = str(month).zfill(2)
 
     try:
