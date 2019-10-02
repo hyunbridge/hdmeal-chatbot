@@ -171,18 +171,20 @@ def cal(reqdata, debugging):
 
     delta = (end - start).days
 
-    if delta > 60:
-        msg = ("서버 성능상의 이유로 최대 60일까지만 조회가 가능합니다."
+    if delta > 90:
+        msg = ("서버 성능상의 이유로 최대 90일까지만 조회가 가능합니다."
                "\n조회기간이 %s부터 %s까지로 제한되었습니다.\n\n" %
-               (start.date(), (start + datetime.timedelta(days=60)).date()))
-        delta = 60
+               (start.date(), (start + datetime.timedelta(days=90)).date()))
+        delta = 90
     elif not delta == 0:
         msg = "%s부터 %s까지 조회합니다.\n\n" % (start.date(), end.date())
 
     for i in range(delta + 1):
         date = start + datetime.timedelta(days=i)
         calendar = getdata.cal(date.year, date.month, date.day, debugging)
-        if calendar != "일정이 없습니다." and calendar != "토요휴업일":
+        calendar = calendar.replace("일정이 없습니다.", "").replace("토요휴업일", "").replace("여름방학", "")\
+                           .replace("겨울방학", "")
+        if calendar:
             if date.weekday() == 0:
                 weekday = "월"
             elif date.weekday() == 1:
