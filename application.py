@@ -85,6 +85,13 @@ class WTemp(Resource):
         return skill.wtemp(isDebugging)
 
 
+# 학사일정 조회
+class Cal(Resource):
+    @staticmethod
+    def post():
+        return skill.cal(request.data, isDebugging)
+
+
 # URL Router에 맵핑.(Rest URL정의)
 api.add_resource(Date, '/date/<int:year>-<int:month>-<int:date>')
 api.add_resource(Meal, '/meal/')
@@ -96,6 +103,7 @@ api.add_resource(PurgeCache, '/cache/purge/')
 api.add_resource(ManageUser, '/user/manage/')
 api.add_resource(DeleteUser, '/user/delete/')
 api.add_resource(WTemp, '/wtemp/')
+api.add_resource(Cal, '/cal/')
 
 # 서버 실행
 if __name__ == '__main__':

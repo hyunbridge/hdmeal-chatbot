@@ -141,6 +141,69 @@ def tt(reqdata, debugging):
     return skill(msg)
 
 
+# Skill 학사일정 조회
+def cal(reqdata, debugging):
+    msg = str()
+    try:
+        data = json.loads(reqdata)["action"]["params"]
+    except Exception:
+        return skill("오류가 발생했습니다.")
+    if "sys_date" in data:
+        try:
+            date = json.loads(data["sys_date"])["date"]
+            start = datetime.datetime.strptime(date, "%Y-%m-%d")
+            end = start
+        except Exception:
+            return skill("오류가 발생했습니다.")
+    elif "sys_date_period" in data:
+        try:
+            start = json.loads(data["sys_date_period"])["from"]["date"]
+            start = datetime.datetime.strptime(start, "%Y-%m-%d")
+        except Exception:
+            return skill("오류가 발생했습니다.")
+        try:
+            end = json.loads(data["sys_date_period"])["to"]["date"]
+            end = datetime.datetime.strptime(end, "%Y-%m-%d")
+        except Exception:
+            return skill("오류가 발생했습니다.")
+    else:
+        return skill("오늘, 이번 달 등의 날짜 또는 기간을 입력해 주세요.")
+
+    delta = (end - start).days
+
+    if delta > 60:
+        msg = ("서버 성능상의 이유로 최대 60일까지만 조회가 가능합니다."
+               "\n조회기간이 %s부터 %s까지로 제한되었습니다.\n\n" %
+               (start.date(), (start + datetime.timedelta(days=60)).date()))
+        delta = 60
+    elif not delta == 0:
+        msg = "%s부터 %s까지 조회합니다.\n\n" % (start.date(), end.date())
+
+    for i in range(delta + 1):
+        date = start + datetime.timedelta(days=i)
+        calendar = getdata.cal(date.year, date.month, date.day, debugging)
+        if calendar != "일정이 없습니다." and calendar != "토요휴업일":
+            if date.weekday() == 0:
+                weekday = "월"
+            elif date.weekday() == 1:
+                weekday = "화"
+            elif date.weekday() == 2:
+                weekday = "수"
+            elif date.weekday() == 3:
+                weekday = "목"
+            elif date.weekday() == 4:
+                weekday = "금"
+            elif date.weekday() == 5:
+                weekday = "토"
+            else:
+                weekday = "일"
+            msg = "%s%s(%s):\n%s\n" % (msg, date.date(), weekday, calendar)
+    msg = msg[:-1]  # 마지막 줄바꿈 제거
+    if not msg:
+        msg = "일정이 없습니다."
+    return skill(msg)
+
+
 # 캐시 가져오기
 def get_cache(reqdata, debugging):
 

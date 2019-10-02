@@ -77,7 +77,7 @@ def tt(tt_grade, tt_class, tt_weekday, debugging):
 # 학사일정 가져오기
 def cal(year, month, date, debugging):
     # 자료형 변환
-    year = str(year).zfill(2)
+    year = str(year).zfill(4)
     month = str(month).zfill(2)
     date = str(date).zfill(2)
 
