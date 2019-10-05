@@ -13,6 +13,7 @@ import json
 from collections import OrderedDict
 from modules import mealparser, calendarparser, wtemparser
 
+
 # 급식정보 가져오기
 def meal(year, month, date, debugging):
     # 자료형 변환
@@ -59,7 +60,8 @@ def tt(tt_grade, tt_class, tt_weekday, debugging):
 
     data = json_data["data"]["result"][tt_weekday]
     # 헤더 작성. n학년 n반, yyyy-mm-dd(요일): 형식
-    header = ("%s학년 %s반,\n%s(%s):\n\n" % (tt_grade, tt_class, data["date"].replace(".", "-"), data["day"].replace("요일", "")))
+    header = ("%s학년 %s반,\n%s(%s):\n\n" % (
+    tt_grade, tt_class, data["date"].replace(".", "-"), data["day"].replace("요일", "")))
     if debugging:
         print(header)
     # 본문 작성
