@@ -15,19 +15,7 @@ from modules import getdata, cache, user
 
 # Skill 응답용 JSON 생성
 def skill(msg):
-    return_simple_text = OrderedDict()
-    return_outputs = OrderedDict()
-    return_list = list()
-    return_template = OrderedDict()
-    return_data = OrderedDict()
-    return_simple_text["text"] = msg
-    return_outputs["simpleText"] = return_simple_text
-    if not return_outputs in return_list:
-        return_list.append(return_outputs)
-    return_template["outputs"] = return_list
-    return_data["version"] = "2.0"
-    return_data["template"] = return_template
-    return return_data
+    return {'version': '2.0', 'template': {'outputs': [{'simpleText': {'text': msg}}]}}
 
 
 # 식단조회 코어
@@ -42,6 +30,7 @@ def meal_core(year, month, date, wday, debugging):
         if not cal == "일정이 없습니다.":
             return skill("급식을 실시하지 않습니다. (%s)" % cal)
     return skill(meal["message"])
+
 
 # Skill 식단 조회
 def meal(reqdata, debugging):
@@ -64,6 +53,7 @@ def meal(reqdata, debugging):
         print(date)
         print(wday)
     return meal_core(year, month, date, wday, debugging)
+
 
 # Skill 특정날짜(고정값) 식단 조회
 def meal_specific_date(reqdata, debugging):
@@ -114,6 +104,7 @@ def tt_registered(reqdata, debugging):
     else:
         msg = "미등록 사용자입니다.\n먼저 사용자 등록을 해 주시기 바랍니다."
     return skill(msg)
+
 
 # Skill 시간표 조회 (미등록 사용자용)
 def tt(reqdata, debugging):
@@ -182,8 +173,8 @@ def cal(reqdata, debugging):
     for i in range(delta + 1):
         date = start + datetime.timedelta(days=i)
         calendar = getdata.cal(date.year, date.month, date.day, debugging)
-        calendar = calendar.replace("일정이 없습니다.", "").replace("토요휴업일", "").replace("여름방학", "")\
-                           .replace("겨울방학", "").strip()
+        calendar = calendar.replace("일정이 없습니다.", "").replace("토요휴업일", "").replace("여름방학", "") \
+            .replace("겨울방학", "").strip()
         if calendar:
             if date.weekday() == 0:
                 weekday = "월"
@@ -208,7 +199,6 @@ def cal(reqdata, debugging):
 
 # 캐시 가져오기
 def get_cache(reqdata, debugging):
-
     # 사용자 ID 가져오고 검증
     uid = json.loads(reqdata)["userRequest"]["user"]["id"]
     if user.auth_admin(uid, debugging):
@@ -219,6 +209,7 @@ def get_cache(reqdata, debugging):
     else:
         msg = "사용자 인증에 실패하였습니다.\n당신의 UID는 %s 입니다." % uid
     return skill(msg)
+
 
 # 캐시 비우기
 def purge_cache(reqdata, debugging):
@@ -263,6 +254,7 @@ def manage_user(reqdata, debugging):
         return skill("오류가 발생했습니다.")
     return skill(msg)
 
+
 # 사용자 삭제
 def delete_user(reqdata, debugging):
     try:
@@ -284,3 +276,8 @@ def delete_user(reqdata, debugging):
 # 한강 수온 조회
 def wtemp(debugging):
     return skill(getdata.wtemp(debugging))
+
+
+# 디버그
+if __name__ == "__main__":
+    print(skill("msg"))

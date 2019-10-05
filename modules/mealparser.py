@@ -70,7 +70,7 @@ def parse(year, month, date, debugging):
     if menu == "":
         return "NoData"
     for i in range(18):
-        menu = menu.replace(allergy_filter[i], allergy_string[i])
+        menu = menu.replace(allergy_filter[i], allergy_string[i]).replace('.\n', ',\n')  # 알러지 처리 및 콤마 찍기
     if debugging:
         print(menu)
 
