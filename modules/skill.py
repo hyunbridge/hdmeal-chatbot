@@ -9,7 +9,6 @@
 
 import datetime
 import json
-from collections import OrderedDict
 from modules import getdata, cache, user
 
 
@@ -132,68 +131,97 @@ def tt(reqdata, debugging):
     return skill(msg)
 
 
+# 일정 후처리(잡정보들 삭제)
+def pstpr(cal):
+    return cal.replace("일정이 없습니다.", "").replace("토요휴업일", "").replace("여름방학", "") \
+           .replace("겨울방학", "").strip()
+
+# 요일 처리
+def wday(date):
+    if date.weekday() == 0:
+        return "월"
+    elif date.weekday() == 1:
+        return "화"
+    elif date.weekday() == 2:
+        return "수"
+    elif date.weekday() == 3:
+        return "목"
+    elif date.weekday() == 4:
+        return "금"
+    elif date.weekday() == 5:
+        return "토"
+    else:
+        return "일"
+
 # Skill 학사일정 조회
 def cal(reqdata, debugging):
-    msg = str()
+
+    global msg
+
     try:
         data = json.loads(reqdata)["action"]["params"]
     except Exception:
         return skill("오류가 발생했습니다.")
+
+    # 특정일자 조회
     if "sys_date" in data:
         try:
-            date = json.loads(data["sys_date"])["date"]
-            start = datetime.datetime.strptime(date, "%Y-%m-%d")
-            end = start
+            date = datetime.datetime.strptime(json.loads(data["sys_date"])["date"], "%Y-%m-%d")  # 날짜 파싱
         except Exception:
             return skill("오류가 발생했습니다.")
-    elif "sys_date_period" in data:
+
+        cal = getdata.cal(date.year, date.month, date.day, debugging)
+
+        cal = pstpr(cal)
+        if cal:
+            msg = "%s-%s-%s(%s):\n%s\n" % (date.year, date.month, date.day, wday(date), cal)  # YYYY-MM-DD(Weekday)
+        else:
+            msg = "일정이 없습니다."
+    # 특정일자 조회 끝
+
+    # 기간 조회
+    elif "sys_date_period" in data:  # 기간
+
+        body = str()
+
         try:
-            start = json.loads(data["sys_date_period"])["from"]["date"]
+            start = json.loads(data["sys_date_period"])["from"]["date"]  # 시작일 파싱
             start = datetime.datetime.strptime(start, "%Y-%m-%d")
         except Exception:
             return skill("오류가 발생했습니다.")
         try:
-            end = json.loads(data["sys_date_period"])["to"]["date"]
+            end = json.loads(data["sys_date_period"])["to"]["date"]  # 종료일 파싱
             end = datetime.datetime.strptime(end, "%Y-%m-%d")
         except Exception:
             return skill("오류가 발생했습니다.")
-    else:
+
+        if (end - start).days > 90:  # 90일 이상을 조회요청한 경우,
+            head = ("서버 성능상의 이유로 최대 90일까지만 조회가 가능합니다."
+                    "\n조회기간이 %s부터 %s까지로 제한되었습니다.\n\n" %
+                    (start.date(), (start + datetime.timedelta(days=90)).date()))
+            end = start + datetime.timedelta(days=90)  # 종료일 앞당김
+        else:
+            head = "%s부터 %s까지 조회합니다.\n\n" % (start.date(), end.date())
+
+        cal = getdata.cal_mass(start, end, debugging)
+        # 년, 월, 일, 일정 정보를 담은 튜플이 리스트로 묶여서 반환됨
+
+        for i in cal:
+            date = datetime.date(int(i[0]), int(i[1]), int(i[2]))  # 년, 월, 일
+            cal = i[3]  # 일정
+
+            cal = pstpr(cal)
+            if cal:
+                body = "%s%s-%s-%s(%s):\n%s\n" % (body, i[0], i[1], i[2], wday(date), cal)  # YYYY-MM-DD(Weekday)
+
+        if not body:
+            body = "일정이 없습니다.\n"
+        msg = (head + body)[:-1]  # 맨 끝의 줄바꿈을 제거함
+        # 기간 조회 끝
+
+    else:  # 아무런 파라미터도 넘겨받지 못한 경우
         return skill("오늘, 이번 달 등의 날짜 또는 기간을 입력해 주세요.")
 
-    delta = (end - start).days
-
-    if delta > 90:
-        msg = ("서버 성능상의 이유로 최대 90일까지만 조회가 가능합니다."
-               "\n조회기간이 %s부터 %s까지로 제한되었습니다.\n\n" %
-               (start.date(), (start + datetime.timedelta(days=90)).date()))
-        delta = 90
-    elif not delta == 0:
-        msg = "%s부터 %s까지 조회합니다.\n\n" % (start.date(), end.date())
-
-    for i in range(delta + 1):
-        date = start + datetime.timedelta(days=i)
-        calendar = getdata.cal(date.year, date.month, date.day, debugging)
-        calendar = calendar.replace("일정이 없습니다.", "").replace("토요휴업일", "").replace("여름방학", "") \
-            .replace("겨울방학", "").strip()
-        if calendar:
-            if date.weekday() == 0:
-                weekday = "월"
-            elif date.weekday() == 1:
-                weekday = "화"
-            elif date.weekday() == 2:
-                weekday = "수"
-            elif date.weekday() == 3:
-                weekday = "목"
-            elif date.weekday() == 4:
-                weekday = "금"
-            elif date.weekday() == 5:
-                weekday = "토"
-            else:
-                weekday = "일"
-            msg = "%s%s(%s):\n%s\n" % (msg, date.date(), weekday, calendar)
-    msg = msg[:-1]  # 마지막 줄바꿈 제거
-    if not msg:
-        msg = "일정이 없습니다."
     return skill(msg)
 
 

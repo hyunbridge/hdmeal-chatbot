@@ -10,9 +10,6 @@
 import urllib.request
 from bs4 import BeautifulSoup
 import json
-from collections import OrderedDict
-import re
-import html
 
 
 def parse(year, month, debugging):
