@@ -174,7 +174,7 @@ def cal(reqdata, debugging):
 
         cal = pstpr(cal)
         if cal:
-            msg = "%s-%s-%s(%s):\n%s\n" % (date.year, date.month, date.day, wday(date), cal)  # YYYY-MM-DD(Weekday)
+            msg = "%s-%s-%s(%s):\n%s" % (date.year, date.month, date.day, wday(date), cal)  # YYYY-MM-DD(Weekday)
         else:
             msg = "일정이 없습니다."
     # 특정일자 조회 끝
