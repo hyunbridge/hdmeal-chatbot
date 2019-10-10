@@ -14,23 +14,37 @@ from modules import getdata
 import facebook
 import io
 
-def publish(key, debugging):
+def publish(fb_token, debugging):
+
+    fb = "OK"
+    status = 200
+
     tomorrow = datetime.now() + timedelta(days=1)  # 내일
     meal = getdata.meal(str(tomorrow.year), str(tomorrow.month), str(tomorrow.day), debugging)  # 급식정보 불러오기
 
     # 급식데이터가 있는지 확인
     if "message" in meal:
-        if debugging:
-            print("NoData")
-        return {"Status": "NoData"}
+        if meal["message"] == "등록된 데이터가 없습니다.":
+            if debugging:
+                print("NoData")
+            return {"Parser": "NoData"}, 200
+        else:
+            if debugging:
+                print("NoData")
+            return {"Parser": "ERROR"}, 500
     else:
         date = meal["date"]  # 날짜 - YYYY-MM-DD(Weekday)
         menu = re.sub(r'\[[^\]]*\]', '', meal["menu"]).split('\n')  # 괄호(알레르기정보) 제거, 행별로 나누기
         kcal = meal["kcal"] + " kcal"  # 열량값에 단위(kcal)붙이기
 
     # 템플릿
-    tmpl = Image.open('data/FB_Template.png')
-    pmap_tmpl = tmpl.load()
+    try:
+        tmpl = Image.open('data/FB_Template.png')
+        pmap_tmpl = tmpl.load()
+    except FileNotFoundError:
+        return {"Parser": "OK", "IMG": "Missing File"}, 500
+    except Exception:
+        return {"Parser": "OK", "IMG": "FAIL"}, 500
 
     # 이미지 생성
     output = Image.new(tmpl.mode, tmpl.size)
@@ -65,12 +79,28 @@ def publish(key, debugging):
     output.save(temp, format="png")
 
     # Facebook에 업로드
-    graph = facebook.GraphAPI(access_token=key)
-    graph.put_photo(image=temp.getvalue(), message=date + " 급식")  # YYYY-MM-DD(Weekday) 급식
+    if fb_token:
+        try:
+            graph = facebook.GraphAPI(access_token=fb_token)
+            graph.put_photo(image=temp.getvalue(), message=date + " 급식")  # YYYY-MM-DD(Weekday) 급식
+        except facebook.GraphAPIError as error:
+            if debugging:
+                print(error)
+            if str(error) == "Invalid OAuth access token.":
+                fb = "Invalid Token"
+                status = 400
+            else:
+                fb = "ERR"
+                status = 500
+        except Exception:
+            fb = "ERR"
+            status = 500
+    else:
+        fb = "No Token"
 
     # OK 반환
-    return {"Status": "OK"}
+    return {"Parser": "OK","IMG": "OK", "fb": fb}, status
 
 # 디버그
 if __name__ == "__main__":
-    publish('', True)
+    print(publish('', True))

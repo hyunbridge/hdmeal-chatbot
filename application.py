@@ -96,10 +96,10 @@ class Cal(Resource):
 class FB(Resource):
     @staticmethod
     def post():
-        if "x-fb-key" in request.headers:
-            return fb.publish(request.headers["x-fb-key"], debugging)
+        if "X-FB-Token" in request.headers:
+            return fb.publish(request.headers["X-FB-Token"], debugging)
         else:
-            return {"Status": "NoKey"}, 400
+            return fb.publish('', debugging)
 
 
 # URL Router에 맵핑.(Rest URL정의)

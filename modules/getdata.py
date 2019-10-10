@@ -23,7 +23,9 @@ def meal(year, month, date, debugging):
     date = str(date).zfill(2)
 
     if not os.path.isfile('data/cache/' + year + '-' + month + '-' + date + '.json'):
-        mealparser.parse(year, month, date, debugging)
+        parser = mealparser.parse(year, month, date, debugging)
+        if parser == "NoData" or parser == "":
+            return {"message": "등록된 데이터가 없습니다."}
 
     json_data = OrderedDict()
     try:
