@@ -14,7 +14,7 @@ from modules import getdata, cache, user
 
 # Skill 응답용 JSON 생성
 def skill(msg):
-    return {'version': '2.0', 'template': {'outputs': [{'simpleText': {'text': msg}}]}}
+    return {'version': '2.0', 'data': {'msg': msg}}
 
 
 # 식단조회 코어
