@@ -92,14 +92,13 @@ def tt_registered(reqdata, debugging):
         except Exception:
             return skill("오류가 발생했습니다.")
         try:
-            tt_weekday = datetime.datetime.strptime(sys_date, "%Y-%m-%d").weekday()  # 요일 파싱
+            date = datetime.datetime.strptime(sys_date, "%Y-%m-%d")
         except ValueError:  # 값오류 발생시
             return skill("오류가 발생했습니다.")
         if debugging:
             print(tt_grade)
             print(tt_class)
-            print(tt_weekday)
-        msg = getdata.tt(tt_grade, tt_class, tt_weekday, debugging)
+        msg = getdata.tt(tt_grade, tt_class, date.year, date.month, date.day, debugging)
     else:
         msg = "미등록 사용자입니다.\n먼저 사용자 등록을 해 주시기 바랍니다."
     return skill(msg)
@@ -120,14 +119,13 @@ def tt(reqdata, debugging):
     except Exception:
         return skill("오류가 발생했습니다.")
     try:
-        tt_weekday = datetime.datetime.strptime(sys_date, "%Y-%m-%d").weekday()  # 요일 파싱
+        date = datetime.datetime.strptime(sys_date, "%Y-%m-%d")
     except ValueError:  # 값오류 발생시
         return skill("오류가 발생했습니다.")
     if debugging:
         print(tt_grade)
         print(tt_class)
-        print(tt_weekday)
-    msg = getdata.tt(tt_grade, tt_class, tt_weekday, debugging)
+    msg = getdata.tt(tt_grade, tt_class, date.year, date.month, date.day, debugging)
     return skill(msg)
 
 

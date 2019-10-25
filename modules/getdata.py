@@ -10,9 +10,8 @@
 import datetime
 import json
 import os
-import urllib.request
 from collections import OrderedDict
-from modules import mealparser, calendarparser, wtemparser
+from modules import mealparser, calendarparser, wtemparser, ttparser
 
 
 # 급식정보 가져오기
@@ -41,41 +40,47 @@ def meal(year, month, date, debugging):
 
 
 # 시간표정보 가져오기
-def tt(tt_grade, tt_class, tt_weekday, debugging):
-    # Github Juneyoung-Kang님의 KoreanSchoolAPI 사용
-    # https://github.com/Juneyoung-Kang/koreanschoolapi
+def tt(tt_grade, tt_class, year, month, date, debugging):
+
+    tt_weekday = datetime.date(year, month, date).weekday()
 
     if tt_weekday >= 5:  # 토요일, 일요일 제외
         return "등록된 데이터가 없습니다."
 
-    try:
-        url = urllib.request.urlopen("https://comci.azurewebsites.net/"
-                                     "?schoolName=%ED%9D%A5%EB%8D%95%EC%A4%91%ED%95%99%EA%B5%90"
-                                     "&gradeNumber=" + tt_grade + "&classNumber=" + tt_class + "&resultType=week")
-    except Exception:
-        if debugging:
-            print("오류")
-        return ""
+    data = ttparser.parse(tt_grade, tt_class, year, month, date, debugging)
 
-    data = url.read().decode('utf-8')
+    if not data:
+        return "등록된 데이터가 없습니다."
 
-    json_data = json.loads(data)
+    def wday(tt_weekday):
+        if tt_weekday == 0:
+            return "월"
+        elif tt_weekday == 1:
+            return "화"
+        elif tt_weekday == 2:
+            return "수"
+        elif tt_weekday == 3:
+            return "목"
+        elif tt_weekday == 4:
+            return "금"
+        elif tt_weekday == 5:
+            return "토"
+        elif tt_weekday == 6:
+            return "일"
+        else:
+            return "오류"
 
-    data = json_data["data"]["result"][tt_weekday]
     # 헤더 작성. n학년 n반, yyyy-mm-dd(요일): 형식
-    header = ("%s학년 %s반,\n%s(%s):\n\n" % (
-    tt_grade, tt_class, data["date"].replace(".", "-"), data["day"].replace("요일", "")))
+    header = ("%s학년 %s반,\n%s(%s):\n" % (
+        tt_grade, tt_class, datetime.date(year, month, date), wday(tt_weekday)))
     if debugging:
         print(header)
+
     # 본문 작성
-    if tt_weekday == 1 or tt_weekday == 3:  # 화, 목
-        body = ("1교시: %s\n2교시: %s\n3교시: %s\n4교시: %s\n5교시: %s\n6교시: %s\n7교시: %s"
-                % (data["class01"], data["class02"], data["class03"], data["class04"],
-                   data["class05"], data["class06"], data["class07"]))
-    else:  # 월, 수, 금
-        body = ("1교시: %s\n2교시: %s\n3교시: %s\n4교시: %s\n5교시: %s\n6교시: %s"
-                % (data["class01"], data["class02"], data["class03"],
-                   data["class04"], data["class05"], data["class06"]))
+    body = str()
+    for i in range(len(data)):
+        body = body + "\n%s교시: %s" % (i+1, data[i])
+
     return header + body
 
 
@@ -104,9 +109,9 @@ def cal(year, month, date, debugging):
         return data[date]
     return "일정이 없습니다."
 
+
 # 학사일정 가져오기 (다중)
 def cal_mass(start, end, debugging):
-
     between_month = list()
     between_date = list()
     cal = list()
@@ -158,4 +163,5 @@ def wtemp(debugging):
 
 # 디버그
 if __name__ == "__main__":
-    print(cal_mass(datetime.datetime(2019, 12, 1), datetime.datetime(2020, 2, 29), True))
+    # print(cal_mass(datetime.datetime(2019, 12, 1), datetime.datetime(2020, 2, 29), True))
+    print(tt(3, 11, 2019, 10, 25, True))

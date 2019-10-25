@@ -99,7 +99,7 @@ def publish(fb_token, debugging):
         fb = "No Token"
 
     # OK 반환
-    return {"Parser": "OK","IMG": "OK", "fb": fb}, status
+    return {"Parser": "OK", "IMG": "OK", "fb": fb}, status
 
 # 디버그
 if __name__ == "__main__":
