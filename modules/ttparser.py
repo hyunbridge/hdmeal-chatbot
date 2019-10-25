@@ -5,7 +5,7 @@
 # ██║  ██║██████╔╝██║ ╚═╝ ██║███████╗██║  ██║███████╗
 # ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
 # Copyright 2019, Hyungyo Seo
-# modules/mealparser.py - NEIS 서버에 접속하여 급식정보를 파싱해오는 스크립트입니다.
+# modules/ttparser.py - 컴시간 서버에 접속하여 시간표정보를 파싱해오는 스크립트입니다.
 
 import urllib.request
 import urllib.parse as urlparse
@@ -84,7 +84,8 @@ def parse(tt_grade, tt_class, year, month, date, debugging):
 
     fetch_data = json.loads(fetch_url.read().decode('utf-8').replace('\x00', ''))
 
-    tt = fetch_data["자료14"][tt_grade][tt_class]  # 자료14에 각 반의 시간표 정보가 담겨있음
+    tt = fetch_data["자료14"][tt_grade][tt_class]  # 자료14에 각 반의 일일시간표 정보가 담겨있음
+    og_tt = fetch_data["자료81"][tt_grade][tt_class]  # 자료81에 각 반의 원본시간표 정보가 담겨있음
     teacher_list = fetch_data["자료46"]  # 교사명단
     subject_list = fetch_data["자료92"]  # 2글자로 축약한 과목명단 - 전체 명칭은 긴자료92에 담겨있음
 
@@ -100,11 +101,14 @@ def parse(tt_grade, tt_class, year, month, date, debugging):
         print(tt[comci_weekday])
 
     return_data = list()
-    for i in tt[comci_weekday]:
-        if i != 0:
-            subject = subject_list[int(str(i)[-2:])]  # 뒤의 2자리는 과목명을 나타냄
-            teacher = teacher_list[int(str(i)[:-2])]  # 나머지 숫자는 교사명을 나타냄
-            return_data.append("%s(%s)" % (subject, teacher))
+    for i in range(len(tt[comci_weekday])):
+        if tt[comci_weekday][i] != 0:
+            subject = subject_list[int(str(tt[comci_weekday][i])[-2:])]  # 뒤의 2자리는 과목명을 나타냄
+            teacher = teacher_list[int(str(tt[comci_weekday][i])[:-2])]  # 나머지 숫자는 교사명을 나타냄
+            if not tt[comci_weekday][i] == og_tt[comci_weekday][i]:
+                return_data.append("⭐%s(%s)" % (subject, teacher))
+            else:
+                return_data.append("%s(%s)" % (subject, teacher))
 
     return return_data
 
