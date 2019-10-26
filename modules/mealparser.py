@@ -14,6 +14,9 @@ from collections import OrderedDict
 import re
 import html
 
+# 학교코드와 학교종류를 정확히 입력
+school_code = "J100005775"
+school_kind = 3  # 1 유치원, 2 초등학교, 3 중학교, 4 고등학교
 
 def parse(year, month, date, debugging):
     year = str(year).zfill(2)
@@ -22,11 +25,12 @@ def parse(year, month, date, debugging):
 
     try:
         url = urllib.request.urlopen("http://stu.goe.go.kr/sts_sci_md01_001.do?"
-                                     "schulCode=J100005775"
-                                     "&schulCrseScCode=3"
-                                     "&schulKndScCode=03"
+                                     "schulCode=%s"
+                                     "&schulCrseScCode=%s"
+                                     "&schulKndScCode=%s"
                                      "&schMmealScCode=2"
-                                     "&schYmd=%s.%s.%s" % (year, month, date))
+                                     "&schYmd=%s.%s.%s" % (school_code, school_kind, str(school_kind).zfill(2),
+                                                           year, month, date))
     except Exception as error:
         if debugging:
             print(error)

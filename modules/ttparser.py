@@ -15,6 +15,8 @@ import datetime
 import base64
 
 # 학교가 속한 지역과 학교의 이름을 정확히 입력
+# 검색 결과가 1개로 특정되도록 해주세요.
+# 검색 결과가 2건 이상일 경우, 첫 번째 학교를 선택합니다.
 school_region = "경기"
 school_name = "흥덕중학교"
 
