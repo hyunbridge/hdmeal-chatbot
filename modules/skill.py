@@ -8,27 +8,45 @@
 # modules/skill.py - Skill 응답 데이터를 만드는 스크립트입니다.
 
 import datetime
+from datetime import time
+import time
 import json
 from modules import getdata, cache, user
 
 
 # Skill 응답용 JSON 생성
 def skill(msg):
-    return {'version': '2.0', 'data': {'msg': msg}}
+    return {'version': '2.0',
+            'data': {
+                'msg': msg
+            }
+            }
+def skill_simpletext(msg):
+    return {'version': '2.0',
+            'template': {
+                'outputs': [
+                    {
+                        'simpleText': {
+                            'text': msg
+                        }
+                    }
+                ]
+            }
+            }
 
 
 # 식단조회 코어
 def meal_core(year, month, date, wday, debugging):
     if wday >= 5:  # 주말
-        return skill("급식을 실시하지 않습니다. (주말)")
+        return "급식을 실시하지 않습니다. (주말)"
     meal = getdata.meal(year, month, date, debugging)
     if not "message" in meal:  # 파서 메시지 있는지 확인, 없으면 만들어서 응답
-        return skill("%s:\n\n%s\n\n열량: %s kcal" % (meal["date"], meal["menu"], meal["kcal"]))
+        return "%s:\n\n%s\n\n열량: %s kcal" % (meal["date"], meal["menu"], meal["kcal"])
     if meal["message"] == "등록된 데이터가 없습니다.":
         cal = getdata.cal(year, month, date, debugging)
         if not cal == "일정이 없습니다.":
-            return skill("급식을 실시하지 않습니다. (%s)" % cal)
-    return skill(meal["message"])
+            return "급식을 실시하지 않습니다. (%s)" % cal
+    return meal["message"]
 
 
 # Skill 식단 조회
@@ -51,7 +69,7 @@ def meal(reqdata, debugging):
         print(month)
         print(date)
         print(wday)
-    return meal_core(year, month, date, wday, debugging)
+    return skill(meal_core(year, month, date, wday, debugging))
 
 
 # Skill 특정날짜(고정값) 식단 조회
@@ -74,7 +92,7 @@ def meal_specific_date(reqdata, debugging):
         print(month)
         print(date)
         print(wday)
-    return meal_core(year, month, date, wday, debugging)
+    return skill(meal_core(year, month, date, wday, debugging))
 
 
 # Skill 시간표 조회 (등록 사용자용)
@@ -302,6 +320,86 @@ def delete_user(reqdata, debugging):
 # 한강 수온 조회
 def wtemp(debugging):
     return skill(getdata.wtemp(debugging))
+
+
+# 급식봇 브리핑
+def briefing(reqdata, debugging):
+
+    if datetime.datetime.now().time() >= datetime.time(9):  # 9시 이후이면
+        date = datetime.datetime.now() + datetime.timedelta(days=1)  # 내일을 기준일로 설정
+        date_ko = "내일"
+    else:  # 9시 이전이면
+        date = datetime.datetime.now()   # 오늘을 기준일로 설정
+        date_ko = "오늘"
+
+    # 첫 번째 말풍선 - 헤더 - 작성
+    if date.weekday() >= 5:  # 주말이면
+        return skill_simpletext("%s은 주말 입니다." % date_ko)
+    else:
+        header = "%s은 %s(%s) 입니다." % (date_ko, date.date().isoformat(), wday(date))
+
+    # 두 번째 말풍선 - 날씨 - 작성
+    weather = getdata.weather(debugging)
+
+    # 세 번째 말풍선 - 학사일정 - 작성
+    cal = pstpr(getdata.cal(date.year, date.month, date.day, debugging))
+    if not cal:
+        cal = "%s은 학사일정이 없습니다." % date_ko
+    else:
+        cal = "%s 학사일정:\n\n%s" % (date_ko, cal)
+
+    # 네 번째 말풍선 - 급식 작성
+    meal = meal_core(date.year, date.month, date.day, date.weekday(), debugging)
+    if "급식을 실시하지 않습니다." in meal:
+        meal = "%s은 %s" % (date_ko, meal)
+    elif "열량" in meal:
+        meal = "%s 급식:\n\n%s" % (date_ko, meal[16:])  # 급식 헤더부분 제거
+
+    # 다섯 번째 말풍선 - 시간표 - 작성
+    try:
+        uid = json.loads(reqdata)["userRequest"]["user"]["id"]
+        user_data = user.get_user(uid, debugging)  # 사용자 정보 불러오기
+        tt_grade = user_data[0]
+        tt_class = user_data[1]
+    except Exception:
+        return skill_simpletext("오류가 발생했습니다.")
+    if tt_grade is not None or tt_class is not None:  # 사용자 정보 있을 때
+        tt = "%s 시간표:\n\n%s" % (date_ko,
+                                        getdata.tt(tt_grade, tt_class, date.year, date.month, date.day, debugging))
+    else:
+        tt = "등록된 사용자만 시간표를 볼 수 있습니다."
+
+    return {'version': '2.0',
+            'template': {
+                'outputs': [
+                    {
+                        'simpleText': {
+                            'text': header
+                        }
+                    },
+                    {
+                        'simpleText': {
+                            'text': weather
+                        }
+                    },
+                    {
+                        'simpleText': {
+                            'text': cal
+                        }
+                    },
+                    {
+                        'simpleText': {
+                            'text': meal
+                        }
+                    },
+                    {
+                        'simpleText': {
+                            'text': tt
+                        }
+                    }
+                ]
+            }
+            }
 
 
 # 디버그

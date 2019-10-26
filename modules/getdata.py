@@ -11,7 +11,7 @@ import datetime
 import json
 import os
 from collections import OrderedDict
-from modules import mealparser, calendarparser, wtemparser, ttparser
+from modules import mealparser, calendarparser, wtemparser, ttparser, weatherparser
 
 
 # 급식정보 가져오기
@@ -160,6 +160,19 @@ def wtemp(debugging):
         body = "측정소 또는 서버 오류입니다."
     return body
 
+# 날씨 가져오기
+def weather(debugging):
+    weather = weatherparser.parse(debugging)
+
+    return_data = ("🌡️ 내일 최소/최대 기온: %s℃/%s℃\n\n"
+                   "등굣길 예상 날씨: %s\n"
+                   "🌡️ 기온: %s℃\n"
+                   "🌦️ 강수형태: %s\n"
+                   "❔ 강수확률: %s%%\n"
+                   "💧 습도: %s%%\n" % (weather['temp_min'], weather['temp_max'], weather['sky'], weather['temp'],
+                                    weather['pty'], weather['pop'], weather['reh']))
+
+    return return_data
 
 # 디버그
 if __name__ == "__main__":

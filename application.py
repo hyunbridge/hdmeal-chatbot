@@ -102,6 +102,13 @@ class FB(Resource):
             return fb.publish('', debugging)
 
 
+# 급식봇 브리핑
+class Briefing(Resource):
+    @staticmethod
+    def post():
+        return skill.briefing(request.data, debugging)
+
+
 # URL Router에 맵핑.(Rest URL정의)
 api.add_resource(Date, '/date/<int:year>-<int:month>-<int:date>')
 api.add_resource(Meal, '/meal/')
@@ -115,6 +122,7 @@ api.add_resource(DeleteUser, '/user/delete/')
 api.add_resource(WTemp, '/wtemp/')
 api.add_resource(Cal, '/cal/')
 api.add_resource(FB, '/fb/')
+api.add_resource(Briefing, '/briefing/')
 
 # 서버 실행
 if __name__ == '__main__':
