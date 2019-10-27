@@ -169,7 +169,7 @@ def weather(debugging):
                    "🌡️ 기온: %s℃\n"
                    "🌦️ 강수 형태: %s\n"
                    "❔ 강수 확률: %s%%\n"
-                   "💧 습도: %s%%\n" % (weather['temp_min'], weather['temp_max'], weather['sky'], weather['temp'],
+                   "💧 습도: %s%%" % (weather['temp_min'], weather['temp_max'], weather['sky'], weather['temp'],
                                     weather['pty'], weather['pop'], weather['reh']))
 
     return return_data
