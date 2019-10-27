@@ -69,7 +69,7 @@ def parse(debugging):
 
     # 하늘 상태 대응값 적용
     if int(weather['sky']) <= 4:
-        weather['sky'] = sky[int(weather['sky'])+1]  # 1부터 시작
+        weather['sky'] = sky[int(weather['sky'])-1]  # 1부터 시작
     else:
         weather['sky'] = '⚠ 오류'
 
