@@ -8,8 +8,6 @@
 # modules/skill.py - Skill 응답 데이터를 만드는 스크립트입니다.
 
 import datetime
-from datetime import time
-import time
 import json
 from modules import getdata, cache, user
 
@@ -21,6 +19,8 @@ def skill(msg):
                 'msg': msg
             }
             }
+
+
 def skill_simpletext(msg):
     return {'version': '2.0',
             'template': {
@@ -150,7 +150,8 @@ def tt(reqdata, debugging):
 # 일정 후처리(잡정보들 삭제)
 def pstpr(cal):
     return cal.replace("일정이 없습니다.", "").replace("토요휴업일", "").replace("여름방학", "") \
-           .replace("겨울방학", "").strip()
+        .replace("겨울방학", "").strip()
+
 
 # 요일 처리
 def wday(date):
@@ -169,9 +170,9 @@ def wday(date):
     else:
         return "일"
 
+
 # Skill 학사일정 조회
 def cal(reqdata, debugging):
-
     global msg
 
     try:
@@ -324,7 +325,6 @@ def wtemp(debugging):
 
 # 급식봇 브리핑
 def briefing(reqdata, debugging):
-
     if datetime.datetime.now().time() >= datetime.time(9):  # 9시 이후이면
         # 내일을 기준일로 설정
         date = datetime.datetime.now() + datetime.timedelta(days=1)
@@ -357,7 +357,7 @@ def briefing(reqdata, debugging):
     if "급식을 실시하지 않습니다." in meal:
         meal = "%s은 %s" % (date_ko, meal)
     elif "열량" in meal:
-        meal = "%s 급식:\n%s" % (date_ko, meal[16:])  # 헤더부분 제거
+        meal = "%s 급식:\n%s" % (date_ko, meal[16:].replace('\n\n', '\n'))  # 헤더부분 제거, 줄바꿈 2번 → 1번
     # 시간표
     try:
         uid = json.loads(reqdata)["userRequest"]["user"]["id"]
@@ -368,8 +368,8 @@ def briefing(reqdata, debugging):
         return skill_simpletext("오류가 발생했습니다.")
     if tt_grade is not None or tt_class is not None:  # 사용자 정보 있을 때
         tt = "%s 시간표:\n%s" % (date_ko,
-                                getdata.tt(tt_grade, tt_class, date.year, date.month, date.day, debugging)
-                                .split('):\n\n')[1])  # 헤더부분 제거
+                              getdata.tt(tt_grade, tt_class, date.year, date.month, date.day, debugging)
+                              .split('):\n\n')[1])  # 헤더부분 제거
     else:
         tt = "등록된 사용자만 시간표를 볼 수 있습니다."
 

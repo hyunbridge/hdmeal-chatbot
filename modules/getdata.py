@@ -164,13 +164,15 @@ def wtemp(debugging):
 def weather(debugging):
     weather = weatherparser.parse(debugging)
 
-    return_data = ("🌡️ [오늘/내일] 최소/최대 기온: %s℃/%s℃\n\n"
+    return_data = ("🌡️ [오늘/내일] 최소/최대 기온: %s℃/%s℃\n\n"  # [오늘/내일]은 상황에 따라 적절히 치환해서 사용
                    "등굣길 예상 날씨: %s\n"
                    "🌡️ 기온: %s℃\n"
                    "🌦️ 강수 형태: %s\n"
                    "❔ 강수 확률: %s%%\n"
-                   "💧 습도: %s%%" % (weather['temp_min'], weather['temp_max'], weather['sky'], weather['temp'],
-                                    weather['pty'], weather['pop'], weather['reh']))
+                   "💧 습도: %s%%"
+                   % (weather['temp_min'], weather['temp_max'], weather['sky'], weather['temp'],
+                      weather['pty'], weather['pop'], weather['reh'])
+                   )
 
     return return_data
 
