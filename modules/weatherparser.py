@@ -68,7 +68,7 @@ def parse(debugging):
     pty = ['❌ 없음', '🌧️ 비', '🌤️ 구름 조금', '🌥️ 구름 많음']
 
     # 하늘 상태 대응값 적용
-    if int(weather['sky']) < 4:
+    if int(weather['sky']) <= 4:
         weather['sky'] = sky[int(weather['sky'])+1]  # 1부터 시작
     else:
         weather['sky'] = '⚠ 오류'
