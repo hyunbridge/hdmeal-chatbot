@@ -13,7 +13,6 @@ itsdangerous==1.1.0
 Jinja2==2.10.1
 MarkupSafe==1.1.1
 Pillow==6.2.0
-pymssql==2.1.4
 pyodbc==4.0.27
 pytz==2019.1
 requests==2.22.0
