@@ -49,19 +49,19 @@ def parse(debugging):
 
     if not weather:  # 날씨데이터 없을 경우(다음날 9시로 밀린 경우) 그 다음 데이터를 취함
         # 시간
-        weather['hour'] = data[loc+1].find('hour').text
+        weather['hour'] = data[0].find('hour').text
         # 기온/최대 기온/최소 기온
-        weather['temp'] = data[loc+1].find('temp').text
-        weather['temp_max'] = data[loc+1].find('tmx').text
-        weather['temp_min'] = data[loc+1].find('tmn').text
+        weather['temp'] = data[0].find('temp').text
+        weather['temp_max'] = data[0].find('tmx').text
+        weather['temp_min'] = data[0].find('tmn').text
         # 하늘 상태 -  1: 맑음 2: 구름조금 3: 구름많음 4: 흐림
-        weather['sky'] = data[loc+1].find('sky').text
+        weather['sky'] = data[0].find('sky').text
         # 강수 형태 - 0: 없음 1: 비 2: 비&눈 3: 눈
-        weather['pty'] = data[loc+1].find('pty').text
+        weather['pty'] = data[0].find('pty').text
         # 강수 확률
-        weather['pop'] = data[loc+1].find('pop').text
+        weather['pop'] = data[0].find('pop').text
         # 습도
-        weather['reh'] = data[loc+1].find('reh').text
+        weather['reh'] = data[0].find('reh').text
 
     # 하늘 상태, 강수 형태 대응값
     sky = ['☀ 맑음', '🌤️ 구름 조금', '🌥️ 구름 많음', '☁ 흐림']
