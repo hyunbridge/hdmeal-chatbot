@@ -10,6 +10,8 @@
 import datetime
 import json
 from modules import getdata, cache, user
+from threading import Thread
+import time
 
 
 # Skill 응답용 JSON 생성
@@ -324,8 +326,8 @@ def wtemp(debugging):
 
 
 # 급식봇 브리핑
-def briefing(reqdata, debugging):
-    if datetime.datetime.now().time() >= datetime.time(9):  # 9시 이후이면
+def briefing(reqdata, debugging,):
+    if datetime.datetime.now().time() >= datetime.time(11):  # 11시 이후이면
         # 내일을 기준일로 설정
         date = datetime.datetime.now() + datetime.timedelta(days=1)
         date_ko = "내일"
@@ -334,44 +336,94 @@ def briefing(reqdata, debugging):
         date = datetime.datetime.now()
         date_ko = "오늘"
 
+    def logging_time(original_fn):
+        def wrapper_fn(*args, **kwargs):
+            result = original_fn(*args, **kwargs)
+            if debugging:
+                start_time = time.time()
+                print("{} 실행시작".format(original_fn.__name__))
+                end_time = time.time()
+                print("{} 종료. 실행시간: {} 초".format(original_fn.__name__, end_time - start_time))
+            return result
+        return wrapper_fn
+
     # 첫 번째 말풍선
     # 헤더
-    if date.weekday() >= 5:  # 주말이면
-        return skill_simpletext("%s은 주말 입니다." % date_ko)
-    else:
-        header = "%s은 %s(%s) 입니다." % (date_ko, date.date().isoformat(), wday(date))
+    @logging_time
+    def f_header():
+        global header, hd_err
+        if date.weekday() >= 5:  # 주말이면
+            hd_err = "%s은 주말 입니다." % date_ko
+        else:
+            header = "%s은 %s(%s) 입니다." % (date_ko, date.date().isoformat(), wday(date))
+            hd_err = None
     # 학사일정
-    cal = pstpr(getdata.cal(date.year, date.month, date.day, debugging))
-    if not cal:
-        cal = "%s은 학사일정이 없습니다." % date_ko
-    else:
-        cal = "%s 학사일정:\n\n%s" % (date_ko, cal)
+    @logging_time
+    def f_cal():
+        global cal
+        cal = pstpr(getdata.cal(date.year, date.month, date.day, debugging))
+        if not cal:
+            cal = "%s은 학사일정이 없습니다." % date_ko
+        else:
+            cal = "%s 학사일정:\n\n%s" % (date_ko, cal)
 
     # 두 번째 말풍선
     # 날씨
-    weather = getdata.weather(debugging).replace('[오늘/내일]', date_ko)
+    @logging_time
+    def f_weather():
+        global weather
+        weather = getdata.weather(debugging).replace('[오늘/내일]', date_ko)
 
     # 세 번째 말풍선
     # 급식
-    meal = meal_core(date.year, date.month, date.day, date.weekday(), debugging)
-    if "급식을 실시하지 않습니다." in meal:
-        meal = "%s은 %s" % (date_ko, meal)
-    elif "열량" in meal:
-        meal = "%s 급식:\n%s" % (date_ko, meal[16:].replace('\n\n', '\n'))  # 헤더부분 제거, 줄바꿈 2번 → 1번
+    @logging_time
+    def f_meal():
+        global meal
+        meal = meal_core(date.year, date.month, date.day, date.weekday(), debugging)
+        if "급식을 실시하지 않습니다." in meal:
+            meal = "%s은 %s" % (date_ko, meal)
+        elif "열량" in meal:
+            meal = "%s 급식:\n%s" % (date_ko, meal[16:].replace('\n\n', '\n'))  # 헤더부분 제거, 줄바꿈 2번 → 1번
     # 시간표
-    try:
-        uid = json.loads(reqdata)["userRequest"]["user"]["id"]
-        user_data = user.get_user(uid, debugging)  # 사용자 정보 불러오기
-        tt_grade = user_data[0]
-        tt_class = user_data[1]
-    except Exception:
-        return skill_simpletext("오류가 발생했습니다.")
-    if tt_grade is not None or tt_class is not None:  # 사용자 정보 있을 때
-        tt = "%s 시간표:\n%s" % (date_ko,
-                              getdata.tt(tt_grade, tt_class, date.year, date.month, date.day, debugging)
-                              .split('):\n\n')[1])  # 헤더부분 제거
-    else:
-        tt = "등록된 사용자만 시간표를 볼 수 있습니다."
+    @logging_time
+    def f_tt():
+        global tt
+        tt_grade = str()
+        tt_class = str()
+        try:
+            uid = json.loads(reqdata)["userRequest"]["user"]["id"]
+            user_data = user.get_user(uid, debugging)  # 사용자 정보 불러오기
+            tt_grade = user_data[0]
+            tt_class = user_data[1]
+        except Exception:
+            tt = "시간표 조회 중 오류가 발생했습니다."
+        if tt_grade is not None or tt_class is not None:  # 사용자 정보 있을 때
+            tt = "%s 시간표:\n%s" % (date_ko,
+                                  getdata.tt(tt_grade, tt_class, date.year, date.month, date.day, debugging)
+                                  .split('):\n\n')[1])  # 헤더부분 제거
+        else:
+            tt = "등록된 사용자만 시간표를 볼 수 있습니다."
+
+    # 쓰레드 정의
+    th_header = Thread(target=f_header)
+    th_cal = Thread(target=f_cal)
+    th_weather = Thread(target=f_weather)
+    th_meal = Thread(target=f_meal)
+    th_tt = Thread(target=f_tt)
+    # 쓰레드 실행
+    th_header.start()
+    th_cal.start()
+    th_weather.start()
+    th_meal.start()
+    th_tt.start()
+    # 전 쓰레드 종료 시까지 기다리기
+    th_header.join()
+    if hd_err:
+        return skill_simpletext(hd_err)
+    th_cal.join()
+    th_weather.join()
+    th_meal.join()
+    th_tt.join()
 
     # 응답 만들기
     return {'version': '2.0',

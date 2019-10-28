@@ -29,7 +29,8 @@ def get_user(uid, debugging):
             return_data.append(None)
             return_data.append(None)
             return return_data
-        print(data[enc_uid])
+        if debugging:
+            print(data[enc_uid])
         if data[enc_uid][0] != "" or data[enc_uid][1] != "":  # 사용자 정보 있을 때
             return_data.append(data[enc_uid][0])
             return_data.append(data[enc_uid][1])
