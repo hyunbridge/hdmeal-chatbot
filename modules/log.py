@@ -16,7 +16,7 @@ def init():
     # file max size를 10MB로 설정
     file_max_bytes = 10 * 1024 * 1024
     file_handler = logging.handlers.RotatingFileHandler(filename='./data/hdmeal.log', maxBytes=file_max_bytes,
-                                                        backupCount=10, encoding='UTF-8')
+                                                        backupCount=10)
     stream_handler = logging.StreamHandler()
 
     # handler에 fommater 세팅
