@@ -9,7 +9,7 @@
 
 import datetime
 import json
-from modules import getdata, cache, user
+from modules import getdata, cache, user, log
 from threading import Thread
 import time
 
@@ -21,8 +21,6 @@ def skill(msg):
                 'msg': msg
             }
             }
-
-
 def skill_simpletext(msg):
     return {'version': '2.0',
             'template': {
@@ -36,124 +34,10 @@ def skill_simpletext(msg):
             }
             }
 
-
-# 식단조회 코어
-def meal_core(year, month, date, wday, debugging):
-    if wday >= 5:  # 주말
-        return "급식을 실시하지 않습니다. (주말)"
-    meal = getdata.meal(year, month, date, debugging)
-    if not "message" in meal:  # 파서 메시지 있는지 확인, 없으면 만들어서 응답
-        return "%s:\n\n%s\n\n열량: %s kcal" % (meal["date"], meal["menu"], meal["kcal"])
-    if meal["message"] == "등록된 데이터가 없습니다.":
-        cal = getdata.cal(year, month, date, debugging)
-        if not cal == "일정이 없습니다.":
-            return "급식을 실시하지 않습니다. (%s)" % cal
-    return meal["message"]
-
-
-# Skill 식단 조회
-def meal(reqdata, debugging):
-    try:
-        sys_date = json.loads(json.loads(reqdata)["action"]["params"]["sys_date"])["date"]  # 날짜 가져오기
-    except Exception:
-        return skill("오류가 발생했습니다.")
-    try:
-        # 년월일 파싱
-        year = datetime.datetime.strptime(sys_date, "%Y-%m-%d").timetuple()[0]
-        month = datetime.datetime.strptime(sys_date, "%Y-%m-%d").timetuple()[1]
-        date = datetime.datetime.strptime(sys_date, "%Y-%m-%d").timetuple()[2]
-        wday = datetime.datetime.strptime(sys_date, "%Y-%m-%d").timetuple()[6]
-    except ValueError:  # 파싱중 값오류 발생시
-        return skill("오류가 발생했습니다.")
-    if debugging:
-        print(sys_date)
-        print(year)
-        print(month)
-        print(date)
-        print(wday)
-    return skill(meal_core(year, month, date, wday, debugging))
-
-
-# Skill 특정날짜(고정값) 식단 조회
-def meal_specific_date(reqdata, debugging):
-    try:
-        specific_date = json.loads(reqdata)["action"]["params"]["date"]
-    except Exception:
-        return skill("오류가 발생했습니다.")
-    try:
-        # 년월일 파싱
-        year = datetime.datetime.strptime(specific_date, "%Y-%m-%d").timetuple()[0]
-        month = datetime.datetime.strptime(specific_date, "%Y-%m-%d").timetuple()[1]
-        date = datetime.datetime.strptime(specific_date, "%Y-%m-%d").timetuple()[2]
-        wday = datetime.datetime.strptime(specific_date, "%Y-%m-%d").timetuple()[6]
-    except ValueError:  # 값오류 발생시
-        return skill("오류가 발생했습니다.")
-    if debugging:
-        print(specific_date)
-        print(year)
-        print(month)
-        print(date)
-        print(wday)
-    return skill(meal_core(year, month, date, wday, debugging))
-
-
-# Skill 시간표 조회 (등록 사용자용)
-def tt_registered(reqdata, debugging):
-    try:
-        uid = json.loads(reqdata)["userRequest"]["user"]["id"]
-        user_data = user.get_user(uid, debugging)  # 사용자 정보 불러오기
-        tt_grade = user_data[0]
-        tt_class = user_data[1]
-    except Exception:
-        return skill("오류가 발생했습니다.")
-    if tt_grade is not None or tt_class is not None:  # 사용자 정보 있을 때
-        try:
-            sys_date = json.loads(json.loads(reqdata)["action"]["params"]["sys_date"])["date"]  # 날짜 파싱
-        except Exception:
-            return skill("오류가 발생했습니다.")
-        try:
-            date = datetime.datetime.strptime(sys_date, "%Y-%m-%d")
-        except ValueError:  # 값오류 발생시
-            return skill("오류가 발생했습니다.")
-        if debugging:
-            print(tt_grade)
-            print(tt_class)
-        msg = getdata.tt(tt_grade, tt_class, date.year, date.month, date.day, debugging)
-    else:
-        msg = "미등록 사용자입니다.\n먼저 사용자 등록을 해 주시기 바랍니다."
-    return skill(msg)
-
-
-# Skill 시간표 조회 (미등록 사용자용)
-def tt(reqdata, debugging):
-    try:
-        tt_grade = json.loads(reqdata)["action"]["params"]["Grade"]  # 학년 파싱
-    except Exception:
-        return skill("오류가 발생했습니다.")
-    try:
-        tt_class = json.loads(reqdata)["action"]["params"]["Class"]  # 반 파싱
-    except Exception:
-        return skill("오류가 발생했습니다.")
-    try:
-        sys_date = json.loads(json.loads(reqdata)["action"]["params"]["sys_date"])["date"]  # 날짜 파싱
-    except Exception:
-        return skill("오류가 발생했습니다.")
-    try:
-        date = datetime.datetime.strptime(sys_date, "%Y-%m-%d")
-    except ValueError:  # 값오류 발생시
-        return skill("오류가 발생했습니다.")
-    if debugging:
-        print(tt_grade)
-        print(tt_class)
-    msg = getdata.tt(tt_grade, tt_class, date.year, date.month, date.day, debugging)
-    return skill(msg)
-
-
 # 일정 후처리(잡정보들 삭제)
 def pstpr(cal):
     return cal.replace("일정이 없습니다.", "").replace("토요휴업일", "").replace("여름방학", "") \
         .replace("겨울방학", "").strip()
-
 
 # 요일 처리
 def wday(date):
@@ -172,24 +56,153 @@ def wday(date):
     else:
         return "일"
 
+# 식단조회 코어
+def meal_core(year, month, date, wday, req_id, debugging):
+    if wday >= 5:  # 주말
+        return "급식을 실시하지 않습니다. (주말)"
+    meal = getdata.meal(year, month, date, req_id, debugging)
+    if not "message" in meal:  # 파서 메시지 있는지 확인, 없으면 만들어서 응답
+        return "%s:\n\n%s\n\n열량: %s kcal" % (meal["date"], meal["menu"], meal["kcal"])
+    if meal["message"] == "등록된 데이터가 없습니다.":
+        cal = getdata.cal(year, month, date, req_id, debugging)
+        if not cal == "일정이 없습니다.":
+            return "급식을 실시하지 않습니다. (%s)" % cal
+    return meal["message"]
+
+
+# Skill 식단 조회
+def meal(reqdata, req_id, debugging):
+    log.info("[#%s] meal@modules/skill.py: 식단 조회 요청" % req_id)
+    try:
+        sys_date = json.loads(json.loads(reqdata)["action"]["params"]["sys_date"])["date"]  # 날짜 가져오기
+    except Exception:
+        log.err("[#%s] meal@modules/skill.py: 식단 조회 요청 파싱 중 오류 " % req_id)
+        return skill("오류가 발생했습니다.\n요청 ID: " + req_id)
+    try:
+        # 년월일 파싱
+        year = datetime.datetime.strptime(sys_date, "%Y-%m-%d").timetuple()[0]
+        month = datetime.datetime.strptime(sys_date, "%Y-%m-%d").timetuple()[1]
+        date = datetime.datetime.strptime(sys_date, "%Y-%m-%d").timetuple()[2]
+        wday = datetime.datetime.strptime(sys_date, "%Y-%m-%d").timetuple()[6]
+    except ValueError:  # 파싱중 값오류 발생시
+        log.err("[#%s] meal@modules/skill.py: 식단 조회 날짜 파싱 중 값오류" % req_id)
+        return skill("오류가 발생했습니다.\n요청 ID: " + req_id)
+    if debugging:
+        print(sys_date)
+        print(year)
+        print(month)
+        print(date)
+        print(wday)
+    return skill(meal_core(year, month, date, wday, req_id, debugging))
+
+
+# Skill 특정날짜(고정값) 식단 조회
+def meal_specific_date(reqdata, req_id, debugging):
+    log.info("[#%s] meal_specific_date@modules/skill.py: 식단 조회(고정값) 요청" % req_id)
+    try:
+        specific_date = json.loads(reqdata)["action"]["params"]["date"]
+    except Exception:
+        log.err("[#%s] meal_specific_date@modules/skill.py: 식단 조회(고정값) 요청 파싱 중 오류" % req_id)
+        return skill("오류가 발생했습니다.\n요청 ID: " + req_id)
+    try:
+        # 년월일 파싱
+        year = datetime.datetime.strptime(specific_date, "%Y-%m-%d").timetuple()[0]
+        month = datetime.datetime.strptime(specific_date, "%Y-%m-%d").timetuple()[1]
+        date = datetime.datetime.strptime(specific_date, "%Y-%m-%d").timetuple()[2]
+        wday = datetime.datetime.strptime(specific_date, "%Y-%m-%d").timetuple()[6]
+    except ValueError:  # 값오류 발생시
+        log.err("[#%s] meal_specific_date@modules/skill.py: 식단 조회(고정값) 날짜 파싱 중 값오류" % req_id)
+        return skill("오류가 발생했습니다.\n요청 ID: " + req_id)
+    if debugging:
+        print(specific_date)
+        print(year)
+        print(month)
+        print(date)
+        print(wday)
+    return skill(meal_core(year, month, date, wday, req_id, debugging))
+
+
+# Skill 시간표 조회 (등록 사용자용)
+def tt_registered(reqdata, req_id, debugging):
+    log.info("[#%s] tt_registered@modules/skill.py: 시간표 조회(등록) 요청" % req_id)
+    try:
+        uid = json.loads(reqdata)["userRequest"]["user"]["id"]
+        user_data = user.get_user(uid, req_id, debugging)  # 사용자 정보 불러오기
+        tt_grade = user_data[0]
+        tt_class = user_data[1]
+    except Exception:
+        log.err("[#%s] tt_registered@modules/skill.py: 시간표 조회(등록) 사용자 파싱 중 오류" % req_id)
+        return skill("오류가 발생했습니다.\n요청 ID: " + req_id)
+    if tt_grade is not None or tt_class is not None:  # 사용자 정보 있을 때
+        try:
+            sys_date = json.loads(json.loads(reqdata)["action"]["params"]["sys_date"])["date"]  # 날짜 파싱
+        except Exception:
+            log.err("[#%s] tt_registered@modules/skill.py: 시간표 조회(등록) 날짜 파싱 중 오류" % req_id)
+            return skill("오류가 발생했습니다.\n요청 ID: " + req_id)
+        try:
+            date = datetime.datetime.strptime(sys_date, "%Y-%m-%d")
+        except ValueError:  # 값오류 발생시
+            log.err("[#%s] tt_registered@modules/skill.py: 시간표 조회(등록) 날짜 파싱 중 값오류" % req_id)
+            return skill("오류가 발생했습니다.\n요청 ID: " + req_id)
+        if debugging:
+            print(tt_grade)
+            print(tt_class)
+        msg = getdata.tt(tt_grade, tt_class, date.year, date.month, date.day, req_id, debugging)
+    else:
+        log.info("[#%s] tt_registered@modules/skill.py: 시간표 조회(등록) 미등록 사용자" % req_id)
+        msg = "미등록 사용자입니다.\n먼저 사용자 등록을 해 주시기 바랍니다."
+    return skill(msg)
+
+
+# Skill 시간표 조회 (미등록 사용자용)
+def tt(reqdata, req_id, debugging):
+    log.info("[#%s] tt@modules/skill.py: 시간표 조회(미등록) 요청" % req_id)
+    try:
+        tt_grade = json.loads(reqdata)["action"]["params"]["Grade"]  # 학년 파싱
+    except Exception:
+        log.err("[#%s] tt@modules/skill.py: 시간표 조회(미등록) 학년 파싱 중 오류" % req_id)
+        return skill("오류가 발생했습니다.\n요청 ID: " + req_id)
+    try:
+        tt_class = json.loads(reqdata)["action"]["params"]["Class"]  # 반 파싱
+    except Exception:
+        log.err("[#%s] tt@modules/skill.py: 시간표 조회(미등록) 반 파싱 중 오류" % req_id)
+        return skill("오류가 발생했습니다.\n요청 ID: " + req_id)
+    try:
+        sys_date = json.loads(json.loads(reqdata)["action"]["params"]["sys_date"])["date"]  # 날짜 파싱
+    except Exception:
+        log.err("[#%s] tt@modules/skill.py: 시간표 조회(미등록) 날짜 파싱 중 오류" % req_id)
+        return skill("오류가 발생했습니다.\n요청 ID: " + req_id)
+    try:
+        date = datetime.datetime.strptime(sys_date, "%Y-%m-%d")
+    except ValueError:  # 값오류 발생시
+        log.err("[#%s] tt@modules/skill.py: 시간표 조회(미등록) 날짜 파싱 중 값오류" % req_id)
+        return skill("오류가 발생했습니다.\n요청 ID: " + req_id)
+    if debugging:
+        print(tt_grade)
+        print(tt_class)
+    msg = getdata.tt(tt_grade, tt_class, date.year, date.month, date.day, req_id, debugging)
+    return skill(msg)
+
 
 # Skill 학사일정 조회
-def cal(reqdata, debugging):
+def cal(reqdata, req_id, debugging):
     global msg
-
+    log.info("[#%s] cal@modules/skill.py: 학사일정 조회 요청" % req_id)
     try:
         data = json.loads(reqdata)["action"]["params"]
     except Exception:
-        return skill("오류가 발생했습니다.")
+        log.err("[#%s] cal@modules/skill.py: 학사일정 조회 요청 파싱 중 오류" % req_id)
+        return skill("오류가 발생했습니다.\n요청 ID: " + req_id)
 
     # 특정일자 조회
     if "sys_date" in data:
         try:
             date = datetime.datetime.strptime(json.loads(data["sys_date"])["date"], "%Y-%m-%d")  # 날짜 파싱
         except Exception:
-            return skill("오류가 발생했습니다.")
+            log.err("[#%s] cal@modules/skill.py: 학사일정 조회 날짜 파싱 중 오류" % req_id)
+            return skill("오류가 발생했습니다.\n요청 ID: " + req_id)
 
-        cal = getdata.cal(date.year, date.month, date.day, debugging)
+        cal = getdata.cal(date.year, date.month, date.day, req_id, debugging)
 
         cal = pstpr(cal)
         if cal:
@@ -207,12 +220,14 @@ def cal(reqdata, debugging):
             start = json.loads(data["sys_date_period"])["from"]["date"]  # 시작일 파싱
             start = datetime.datetime.strptime(start, "%Y-%m-%d")
         except Exception:
-            return skill("오류가 발생했습니다.")
+            log.err("[#%s] cal@modules/skill.py: 학사일정 조회 기간(시작) 파싱 중 오류" % req_id)
+            return skill("오류가 발생했습니다.\n요청 ID: " + req_id)
         try:
             end = json.loads(data["sys_date_period"])["to"]["date"]  # 종료일 파싱
             end = datetime.datetime.strptime(end, "%Y-%m-%d")
         except Exception:
-            return skill("오류가 발생했습니다.")
+            log.err("[#%s] cal@modules/skill.py: 학사일정 조회 기간(끝) 파싱 중 오류" % req_id)
+            return skill("오류가 발생했습니다.\n요청 ID: " + req_id)
 
         if (end - start).days > 90:  # 90일 이상을 조회요청한 경우,
             head = ("서버 성능상의 이유로 최대 90일까지만 조회가 가능합니다."
@@ -222,7 +237,7 @@ def cal(reqdata, debugging):
         else:
             head = "%s부터 %s까지 조회합니다.\n\n" % (start.date(), end.date())
 
-        cal = getdata.cal_mass(start, end, debugging)
+        cal = getdata.cal_mass(start, end, req_id, debugging)
         # 년, 월, 일, 일정 정보를 담은 튜플이 리스트로 묶여서 반환됨
 
         for i in cal:
@@ -239,94 +254,115 @@ def cal(reqdata, debugging):
         # 기간 조회 끝
 
     else:  # 아무런 파라미터도 넘겨받지 못한 경우
+        log.info("[#%s] cal@modules/skill.py: 학사일정 조회 파라미터 없음" % req_id)
         return skill("오늘, 이번 달 등의 날짜 또는 기간을 입력해 주세요.")
 
     return skill(msg)
 
 
 # 캐시 가져오기
-def get_cache(reqdata, debugging):
+def get_cache(reqdata, req_id, debugging):
+    log.info("[#%s] get_cache@modules/skill.py: 캐시 조회 요청" % req_id)
     # 사용자 ID 가져오고 검증
     uid = json.loads(reqdata)["userRequest"]["user"]["id"]
-    if user.auth_admin(uid, debugging):
-        cache_list = cache.get(debugging)
+    if user.auth_admin(uid, req_id, debugging):
+        cache_list = cache.get(req_id, debugging)
         if cache_list == "":
+            log.info("[#%s] get_cache@modules/skill.py: 캐시 조회 캐시 없음" % req_id)
             cache_list = "\n캐시가 없습니다."
         msg = "캐시 목록:" + cache_list
     else:
+        log.info("[#%s] get_cache@modules/skill.py: 캐시 조회 인증 실패" % req_id)
         msg = "사용자 인증에 실패하였습니다.\n당신의 UID는 %s 입니다." % uid
     return skill(msg)
 
 
 # 캐시 비우기
-def purge_cache(reqdata, debugging):
+def purge_cache(reqdata, req_id, debugging):
+    log.info("[#%s] purge_cache@modules/skill.py: 캐시 삭제 요청" % req_id)
     # 사용자 ID 가져오고 검증
     uid = json.loads(reqdata)["userRequest"]["user"]["id"]
-    if user.auth_admin(uid, debugging):
-        if cache.purge(debugging)["status"] == "OK":  # 삭제 실행, 결과 검증
+    if user.auth_admin(uid, req_id, debugging):
+        if cache.purge(req_id, debugging)["status"] == "OK":  # 삭제 실행, 결과 검증
             msg = "캐시를 비웠습니다."
         else:
+            log.err("[#%s] purge_cache@modules/skill.py: 캐시 삭제 실패" % req_id)
             msg = "삭제에 실패하였습니다. 오류가 발생했습니다."
     else:
+        log.info("[#%s] purge_cache@modules/skill.py: 캐시 삭제 인증 실패" % req_id)
         msg = "사용자 인증에 실패하였습니다.\n당신의 UID는 %s 입니다." % uid
     return skill(msg)
 
 
 # 사용자 관리
-def manage_user(reqdata, debugging):
+def manage_user(reqdata, req_id, debugging):
+    log.info("[#%s] manage_user@modules/skill.py: 사용자 관리 요청" % req_id)
     try:
         user_grade = json.loads(reqdata)["action"]["params"]["Grade"]  # 학년 파싱
     except Exception:
-        return skill("오류가 발생했습니다.")
+        log.err("[#%s] manage_user@modules/skill.py: 사용자 관리 학년 파싱 중 오류" % req_id)
+        return skill("오류가 발생했습니다.\n요청 ID: " + req_id)
     try:
         user_class = json.loads(reqdata)["action"]["params"]["Class"]  # 반 파싱
     except Exception:
-        return skill("오류가 발생했습니다.")
+        log.err("[#%s] manage_user@modules/skill.py: 사용자 관리 반 파싱 중 오류" % req_id)
+        return skill("오류가 발생했습니다.\n요청 ID: " + req_id)
     try:
         uid = json.loads(reqdata)["userRequest"]["user"]["id"]  # UID 파싱
     except Exception:
-        return skill("오류가 발생했습니다.")
+        log.err("[#%s] manage_user@modules/skill.py: 사용자 관리 UID 파싱 중 오류" % req_id)
+        return skill("오류가 발생했습니다.\n요청 ID: " + req_id)
     if debugging:
         print(user_grade)
         print(user_class)
         print(uid)
-    req = user.manage_user(uid, user_grade, user_class, debugging)
+    req = user.manage_user(uid, user_grade, user_class, req_id, debugging)
     if req == "Created":
+        log.info("[#%s] manage_user@modules/skill.py: 사용자 관리 요청 처리함(생성)" % req_id)
         msg = "등록에 성공했습니다."
     elif req == "Same":
+        log.info("[#%s] manage_user@modules/skill.py: 사용자 관리 요청 처리함(동일)" % req_id)
         msg = "저장된 정보와 수정할 정보가 같아 수정하지 않았습니다."
     elif req == "Updated":
+        log.info("[#%s] manage_user@modules/skill.py: 사용자 관리 요청 처리함(수정)" % req_id)
         msg = "수정되었습니다."
     else:
-        return skill("오류가 발생했습니다.")
+        log.err("[#%s] manage_user@modules/skill.py: 사용자 관리 요청 처리 중 오류" % req_id)
+        return skill("오류가 발생했습니다.\n요청 ID: " + req_id)
     return skill(msg)
 
 
 # 사용자 삭제
-def delete_user(reqdata, debugging):
+def delete_user(reqdata, req_id, debugging):
+    log.info("[#%s] delete_user@modules/skill.py: 사용자 삭제 요청" % req_id)
     try:
         uid = json.loads(reqdata)["userRequest"]["user"]["id"]  # UID 파싱
     except Exception:
-        return skill("오류가 발생했습니다.")
+        return skill("오류가 발생했습니다.\n요청 ID: " + req_id)
     if debugging:
         print(uid)
-    req = user.delete_user(uid, debugging)
+    req = user.delete_user(uid, req_id, debugging)
     if req == "NotExist":
+        log.info("[#%s] delete_user@modules/skill.py: 사용자 삭제 요청 처리함(미존재)" % req_id)
         msg = "존재하지 않는 사용자입니다."
     elif req == "Deleted":
+        log.info("[#%s] delete_user@modules/skill.py: 사용자 삭제 요청 처리함(삭제)" % req_id)
         msg = "삭제에 성공했습니다."
     else:
-        return skill("오류가 발생했습니다.")
+        log.err("[#%s] delete_user@modules/skill.py: 사용자 삭제 요청 처리 중 오류" % req_id)
+        return skill("오류가 발생했습니다.\n요청 ID: " + req_id)
     return skill(msg)
 
 
 # 한강 수온 조회
-def wtemp(debugging):
-    return skill(getdata.wtemp(debugging))
+def wtemp(req_id, debugging):
+    log.info("[#%s] wtemp@modules/skill.py: 한강 수온 조회 요청" % req_id)
+    return skill(getdata.wtemp(req_id, debugging))
 
 
 # 급식봇 브리핑
-def briefing(reqdata, debugging,):
+def briefing(reqdata, req_id, debugging,):
+    log.info("[#%s] briefing@modules/skill.py: 브리핑 요청" % req_id)
     if datetime.datetime.now().time() >= datetime.time(11):  # 11시 이후이면
         # 내일을 기준일로 설정
         date = datetime.datetime.now() + datetime.timedelta(days=1)
@@ -335,6 +371,8 @@ def briefing(reqdata, debugging,):
         # 오늘을 기준일로 설정
         date = datetime.datetime.now()
         date_ko = "오늘"
+
+    log.info("[#%s] briefing@modules/skill.py: 브리핑 기준일: %s" % (req_id, date))
 
     def logging_time(original_fn):
         def wrapper_fn(*args, **kwargs):
@@ -353,6 +391,7 @@ def briefing(reqdata, debugging,):
     def f_header():
         global header, hd_err
         if date.weekday() >= 5:  # 주말이면
+            log.info("[#%s] briefing@modules/skill.py: 브리핑 기준일 주말임" % req_id)
             hd_err = "%s은 주말 입니다." % date_ko
         else:
             header = "%s은 %s(%s) 입니다." % (date_ko, date.date().isoformat(), wday(date))
@@ -361,8 +400,9 @@ def briefing(reqdata, debugging,):
     @logging_time
     def f_cal():
         global cal
-        cal = pstpr(getdata.cal(date.year, date.month, date.day, debugging))
+        cal = pstpr(getdata.cal(date.year, date.month, date.day, req_id, debugging))
         if not cal:
+            log.info("[#%s] briefing@modules/skill.py: 브리핑 기준일 학사일정 없음" % req_id)
             cal = "%s은 학사일정이 없습니다." % date_ko
         else:
             cal = "%s 학사일정:\n\n%s" % (date_ko, cal)
@@ -372,15 +412,16 @@ def briefing(reqdata, debugging,):
     @logging_time
     def f_weather():
         global weather
-        weather = getdata.weather(debugging).replace('[오늘/내일]', date_ko)
+        weather = getdata.weather(req_id, debugging).replace('[오늘/내일]', date_ko)
 
     # 세 번째 말풍선
     # 급식
     @logging_time
     def f_meal():
         global meal
-        meal = meal_core(date.year, date.month, date.day, date.weekday(), debugging)
+        meal = meal_core(date.year, date.month, date.day, date.weekday(), req_id, debugging)
         if "급식을 실시하지 않습니다." in meal:
+            log.info("[#%s] briefing@modules/skill.py: 브리핑 기준일 급식 미실시" % req_id)
             meal = "%s은 %s" % (date_ko, meal)
         elif "열량" in meal:
             meal = "%s 급식:\n%s" % (date_ko, meal[16:].replace('\n\n', '\n'))  # 헤더부분 제거, 줄바꿈 2번 → 1번
@@ -392,16 +433,18 @@ def briefing(reqdata, debugging,):
         tt_class = str()
         try:
             uid = json.loads(reqdata)["userRequest"]["user"]["id"]
-            user_data = user.get_user(uid, debugging)  # 사용자 정보 불러오기
+            user_data = user.get_user(uid, req_id, debugging)  # 사용자 정보 불러오기
             tt_grade = user_data[0]
             tt_class = user_data[1]
         except Exception:
+            log.err("[#%s] briefing@modules/skill.py: 브리핑 기준일 시간표 조회 중 오류" % req_id)
             tt = "시간표 조회 중 오류가 발생했습니다."
         if tt_grade is not None or tt_class is not None:  # 사용자 정보 있을 때
             tt = "%s 시간표:\n%s" % (date_ko,
-                                  getdata.tt(tt_grade, tt_class, date.year, date.month, date.day, debugging)
+                                  getdata.tt(tt_grade, tt_class, date.year, date.month, date.day, req_id, debugging)
                                   .split('):\n\n')[1])  # 헤더부분 제거
         else:
+            log.info("[#%s] briefing@modules/skill.py: 브리핑 미등록 사용자" % req_id)
             tt = "등록된 사용자만 시간표를 볼 수 있습니다."
 
     # 쓰레드 정의

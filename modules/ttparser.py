@@ -13,6 +13,7 @@ import json
 import ast
 import datetime
 import base64
+from modules import log
 
 # 학교가 속한 지역과 학교의 이름을 정확히 입력
 # 검색 결과가 1개로 특정되도록 해주세요.
@@ -20,12 +21,14 @@ import base64
 school_region = "경기"
 school_name = "흥덕중학교"
 
-def parse(tt_grade, tt_class, year, month, date, debugging):
+def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
     global sunday
     part_code = str()
     tt_date = datetime.datetime(year, month, date).date()
     tt_grade = int(tt_grade)
     tt_class = int(tt_class)
+
+    log.info("[#%s] parse@modules/ttparser.py: 시간표 파싱 시작(%s-%s, %s)" % (req_id, tt_grade, tt_class, tt_date))
 
     try:
         search_req = urllib.request.Request(
@@ -41,6 +44,7 @@ def parse(tt_grade, tt_class, year, month, date, debugging):
     except Exception as error:
         if debugging:
             print(error)
+        log.err("[#%s] parse@modules/ttparser.py: 시간표 파싱 실패(%s-%s, %s)" % (req_id, tt_grade, tt_class, tt_date))
         return error
 
     # 학교 검색결과 가져오기
@@ -82,6 +86,7 @@ def parse(tt_grade, tt_class, year, month, date, debugging):
     except Exception as error:
         if debugging:
             print(error)
+        log.err("[#%s] parse@modules/ttparser.py: 시간표 파싱 실패(%s-%s, %s)" % (req_id, tt_grade, tt_class, tt_date))
         return error
 
     fetch_data = json.loads(fetch_url.read().decode('utf-8').replace('\x00', ''))
@@ -112,8 +117,10 @@ def parse(tt_grade, tt_class, year, month, date, debugging):
             else:
                 return_data.append("%s(%s)" % (subject, teacher))
 
+    log.info("[#%s] parse@modules/ttparser.py: 시간표 파싱 성공(%s-%s, %s)" % (req_id, tt_grade, tt_class, tt_date))
+
     return return_data
 
 # 디버그
 if __name__ == "__main__":
-    print(parse(3, 11, 2019, 10, 25, True))
+    print(parse(3, 11, 2019, 10, 25, "****DEBUG****", True))
