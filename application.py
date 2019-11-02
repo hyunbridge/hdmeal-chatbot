@@ -36,6 +36,8 @@ log.init()
 app = Flask(__name__)
 api = Api(app)
 
+log.info("서버 시작됨")
+
 # 특정 날짜 식단 조회
 class Date(Resource):
     @request_id
@@ -154,5 +156,4 @@ api.add_resource(Briefing, '/briefing/')
 
 # 서버 실행
 if __name__ == '__main__':
-    log.info("서버가 시작했습니다.")
     app.run(debug=debugging)
