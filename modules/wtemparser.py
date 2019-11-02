@@ -9,13 +9,16 @@
 
 import urllib.request
 from bs4 import BeautifulSoup
+from modules import log
 
-def get(debugging):
+def get(req_id, debugging):
+    log.info("[#%s] get@modules/wtemparser.py: 수온 파싱 시작" % req_id)
     try:
         url = urllib.request.urlopen("http://koreawqi.go.kr/wQSCHomeLayout_D.wq?action_type=T")
     except Exception as error:
         if debugging:
             print(error)
+        log.err("[#%s] get@modules/wtemparser.py: 수온 파싱 실패" % req_id)
         return error
     data = BeautifulSoup(url, 'html.parser')
     # 측정일시 파싱
@@ -39,4 +42,5 @@ def get(debugging):
     return_data.append(date)
     return_data.append(time)
     return_data.append(wtemp)
+    log.info("[#%s] get@modules/wtemparser.py: 수온 파싱 성공" % req_id)
     return return_data

@@ -10,13 +10,17 @@
 import json
 import hashlib
 import sqlite3
+from modules import log
 
 path = "data/user/user.db"
 admin_path = "data/user/admin.json"
 
 
 # 사용자 정보 읽기
-def get_user(uid):
+def get_user(uid, req_id):
+
+    log.info("[#%s] get_user@modules/user_sqlite.py: 사용자 조회 시작" % req_id)
+
     # UID 암호화
     enc = hashlib.sha256()
     enc.update(uid.encode("utf-8"))
@@ -34,14 +38,19 @@ def get_user(uid):
     if data is None:  # 사용자 정보 없을 경우
         return_data.append(None)
         return_data.append(None)
+        log.info("[#%s] get_user@modules/user_sqlite.py: 사용자 정보 없음" % req_id)
     else:
         return_data.append(data[1])
         return_data.append(data[2])
+        log.info("[#%s] get_user@modules/user_sqlite.py: 사용자 조회 성공" % req_id)
     return return_data
 
 
 # 사용자 생성 및 수정
-def manage_user(uid, user_grade, user_class):
+def manage_user(uid, user_grade, user_class, req_id):
+
+    log.info("[#%s] manage_user@modules/user_sqlite.py: 사용자 관리 시작" % req_id)
+
     # UID 암호화
     enc = hashlib.sha256()
     enc.update(uid.encode("utf-8"))
@@ -54,11 +63,14 @@ def manage_user(uid, user_grade, user_class):
     data = curs.fetchone()
     if data is None:  # 사용자 정보 없을 때 - 생성
         sql = "INSERT INTO User VALUES ('%s', '%s', '%s');" % (enc_uid, user_grade, user_class)
+        log.info("[#%s] manage_user@modules/user_sqlite.py: 사용자 등록" % req_id)
         return_msg = "Created"
     elif data[1] == user_grade and data[2] == user_class:  # 사용자 정보 똑같을 때 - 아무것도 안 함
+        log.info("[#%s] manage_user@modules/user_sqlite.py: 사용자 정보 같음" % req_id)
         return "Same"
     else:  # 사용자 정보 있고 같지도 않을 때 - 업데이트
         sql = "UPDATE User SET Grade = '%s', Class = '%s'  WHERE UID = '%s';" % (user_grade, user_class, enc_uid)
+        log.info("[#%s] manage_user@modules/user_sqlite.py: 사용자 수정" % req_id)
         return_msg = "Updated"
     curs.execute(sql)
     conn.commit()
@@ -67,7 +79,10 @@ def manage_user(uid, user_grade, user_class):
 
 
 # 사용자 삭제
-def delete_user(uid):
+def delete_user(uid, req_id):
+
+    log.info("[#%s] delete_user@modules/user_sqlite.py: 사용자 삭제 시작" % req_id)
+
     # UID 암호화
     enc = hashlib.sha256()
     enc.update(uid.encode("utf-8"))
@@ -79,15 +94,17 @@ def delete_user(uid):
     curs.execute("SELECT * FROM User WHERE UID = '%s';" % enc_uid)
     data = curs.fetchone()
     if data is None:  # 사용자 정보 없을 때
+        log.info("[#%s] delete_user@modules/user_sqlite.py: 사용자 정보 없음" % req_id)
         return "NotExist"
     curs.execute("DELETE FROM User WHERE UID = '%s';" % enc_uid)
     conn.commit()
     conn.close()
+    log.info("[#%s] delete_user@modules/user_sqlite.py: 사용자 삭제 성공" % req_id)
     return "Deleted"
 
 
 # 관리자 인증
-def auth_admin(uid, debugging):
+def auth_admin(uid, req_id, debugging):
     with open(admin_path, encoding="utf-8") as data_file:
         enc = hashlib.sha256()
         enc.update(uid.encode("utf-8"))
@@ -97,8 +114,10 @@ def auth_admin(uid, debugging):
             print(enc_uid)
             print(data)
         if enc_uid in data:
+            log.info("[#%s] auth_admin@modules/user_sqlite.py: 관리자 인증 성공(일치)" % req_id)
             return True
         else:
+            log.info("[#%s] auth_admin@modules/user_sqlite.py: 관리자 인증 성공(불일치)" % req_id)
             return False
 
 
@@ -113,8 +132,8 @@ if __name__ == "__main__":
     path = "../data/user/user.db"
     admin_path = "../data/user/admin.json"
     if flag == 0:
-        print(get_user(user_id))
+        print(get_user(user_id, "****DEBUG****"))
     elif flag == 1:
-        print(manage_user(user_id, user_grade, user_class))
+        print(manage_user(user_id, user_grade, user_class, "****DEBUG****"))
     elif flag == 2:
-        print(delete_user(user_id))
+        print(delete_user(user_id, "****DEBUG****"))

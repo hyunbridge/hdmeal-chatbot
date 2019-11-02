@@ -9,11 +9,14 @@
 
 import urllib.request
 import xml.etree.ElementTree
+from modules import log
 
 # 지역코드를 정확히 입력
 region = "4146351500"
 
-def parse(debugging):
+def parse(req_id, debugging):
+
+    log.info("[#%s] parse@modules/weatherparser.py: 날씨 파싱 시작" % req_id)
 
     try:
         url = urllib.request.urlopen("https://www.kma.go.kr/wid/queryDFSRSS.jsp"
@@ -21,6 +24,7 @@ def parse(debugging):
     except Exception as error:
         if debugging:
             print(error)
+        log.err("[#%s] parse@modules/weatherparser.py: 날씨 파싱 실패" % req_id)
         return error
 
     data = xml.etree.ElementTree.fromstring(url.read().decode('utf-8')).findall('.//data')
@@ -70,15 +74,17 @@ def parse(debugging):
         weather['sky'] = sky[int(weather['sky'])-1]  # 1부터 시작
     else:
         weather['sky'] = '⚠ 오류'
+        log.err("[#%s] parse@modules/weatherparser.py: 하늘 상태 파싱 실패" % req_id)
 
     # 강수 형태 대응값 적용
     if int(weather['pty']) < 4:
         weather['pty'] = pty[int(weather['pty'])]
     else:
         weather['pty'] = '⚠ 오류'
-
+        log.err("[#%s] parse@modules/weatherparser.py: 강수 형태 파싱 실패" % req_id)
+    log.info("[#%s] parse@modules/weatherparser.py: 날씨 파싱 성공" % req_id)
     return weather
 
 # 디버그
 if __name__ == "__main__":
-    print(parse(True))
+    print(parse("****DEBUG****", True))

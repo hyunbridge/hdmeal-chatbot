@@ -11,19 +11,22 @@ import datetime
 import json
 import os
 from collections import OrderedDict
-from modules import mealparser, calendarparser, wtemparser, ttparser, weatherparser
+from modules import mealparser, calendarparser, wtemparser, ttparser, weatherparser, log
 
 
 # 급식정보 가져오기
-def meal(year, month, date, debugging):
+def meal(year, month, date, req_id, debugging):
     # 자료형 변환
     year = str(year).zfill(4)
     month = str(month).zfill(2)
     date = str(date).zfill(2)
 
+    log.info("[#%s] meal@modules/getdata.py: 급식 데이터 가져오기 시작(%s-%s-%s)" % (req_id, year, month, date))
+
     if not os.path.isfile('data/cache/' + year + '-' + month + '-' + date + '.json'):
-        parser = mealparser.parse(year, month, date, debugging)
+        parser = mealparser.parse(year, month, date, req_id, debugging)
         if parser == "NoData" or parser == "":
+            log.info("[#%s] meal@modules/getdata.py: 등록된 급식 데이터 없음(%s-%s-%s)" % (req_id, year, month, date))
             return {"message": "등록된 데이터가 없습니다."}
 
     json_data = OrderedDict()
@@ -35,21 +38,29 @@ def meal(year, month, date, debugging):
     except FileNotFoundError:  # 파일 없을때
         if debugging:
             print("FileNotFound")
-        json_data["message"] = "등록된 데이터가 없습니다."
+        log.info("[#%s] meal@modules/getdata.py: 등록된 급식 데이터 없음(%s-%s-%s)" % (req_id, year, month, date))
+        return {"message": "등록된 데이터가 없습니다."}
+    log.info("[#%s] meal@modules/getdata.py: 급식 데이터 가져오기 성공(%s-%s-%s)" % (req_id, year, month, date))
     return json_data
 
 
 # 시간표정보 가져오기
-def tt(tt_grade, tt_class, year, month, date, debugging):
-
+def tt(tt_grade, tt_class, year, month, date, req_id, debugging):
     tt_weekday = datetime.date(year, month, date).weekday()
 
+    log.info("[#%s] tt@modules/getdata.py: 시간표 데이터 가져오기 시작(%s-%s, %s-%s-%s)"
+             % (req_id, tt_grade, tt_class, year, month, date))
+
     if tt_weekday >= 5:  # 토요일, 일요일 제외
+        log.info("[#%s] tt@modules/getdata.py: 등록된 시간표 데이터 없음(%s-%s, %s-%s-%s)"
+                 % (req_id, tt_grade, tt_class, year, month, date))
         return "등록된 데이터가 없습니다."
 
-    data = ttparser.parse(tt_grade, tt_class, year, month, date, debugging)
+    data = ttparser.parse(tt_grade, tt_class, year, month, date, req_id, debugging)
 
     if not data:
+        log.info("[#%s] tt@modules/getdata.py: 등록된 시간표 데이터 없음(%s-%s, %s-%s-%s)"
+                 % (req_id, tt_grade, tt_class, year, month, date))
         return "등록된 데이터가 없습니다."
 
     def wday(tt_weekday):
@@ -81,19 +92,24 @@ def tt(tt_grade, tt_class, year, month, date, debugging):
     for i in range(len(data)):
         body = body + "\n%s교시: %s" % (i+1, data[i])
 
+    log.info("[#%s] tt@modules/getdata.py: 시간표 데이터 가져오기 성공(%s-%s, %s-%s-%s)"
+             % (req_id, tt_grade, tt_class, year, month, date))
+
     return header + body
 
 
 # 학사일정 가져오기
-def cal(year, month, date, debugging):
+def cal(year, month, date, req_id, debugging):
     # 자료형 변환
     year = str(year).zfill(4)
     month = str(month).zfill(2)
     date = str(date).zfill(2)
 
+    log.info("[#%s] cal@modules/getdata.py: 학사일정 데이터 가져오기 시작(%s-%s-%s)" % (req_id, year, month, date))
+
     # 파일 없으면 생성
     if not os.path.isfile('data/cache/Cal-%s-%s.json' % (year, month)):
-        calendarparser.parse(year, month, debugging)
+        calendarparser.parse(year, month, req_id, debugging)
 
     try:
         with open('data/cache/Cal-%s-%s.json' % (year, month),
@@ -102,19 +118,24 @@ def cal(year, month, date, debugging):
     except FileNotFoundError:  # 파일 없을때
         if debugging:
             print("FileNotFound")
+        log.info("[#%s] cal@modules/getdata.py: 등록된 학사일정 데이터 없음(%s-%s-%s)" % (req_id, year, month, date))
         return "일정이 없습니다."
 
     # 일정 있는지 확인
     if date in data:
+        log.info("[#%s] cal@modules/getdata.py: 학사일정 데이터 가져오기 성공(%s-%s-%s)" % (req_id, year, month, date))
         return data[date]
+    log.info("[#%s] cal@modules/getdata.py: 등록된 학사일정 데이터 없음(%s-%s-%s)" % (req_id, year, month, date))
     return "일정이 없습니다."
 
 
 # 학사일정 가져오기 (다중)
-def cal_mass(start, end, debugging):
+def cal_mass(start, end, req_id, debugging):
     between_month = list()
     between_date = list()
     cal = list()
+
+    log.info("[#%s] cal_mass@modules/getdata.py: 학사일정 다중 데이터 가져오기 시작(%s ~ %s)" % (req_id, start, end))
 
     delta = (end - start).days  # 시작일과 종료일 사이의 일수를 구함
 
@@ -127,7 +148,7 @@ def cal_mass(start, end, debugging):
 
     for i in between_month:  # 대상월의 캐시가 있는지 확인, 없으면 만들기
         if not os.path.isfile('data/cache/Cal-%s-%s.json' % (i[0], i[1])):
-            calendarparser.parse(i[0], i[1], debugging)
+            calendarparser.parse(i[0], i[1], req_id, debugging)
 
     for i in between_date:
         try:  # 파일 열기, JSON 데이터를 딕셔너리형으로 변환
@@ -148,21 +169,31 @@ def cal_mass(start, end, debugging):
 
         cal.append((i[0], i[1], i[2], body))  # 년, 월, 일, 일정
 
+    log.info("[#%s] cal_mass@modules/getdata.py: 학사일정 다중 데이터 가져오기 성공(%s ~ %s)" % (req_id, start, end))
+
     return cal
 
 
 # 한강 수온 가져오기
-def wtemp(debugging):
+def wtemp(req_id, debugging):
+
+    log.info("[#%s] wtemp@modules/getdata.py: 한강 수온 데이터 가져오기 시작" % req_id)
+
     try:
-        data = wtemparser.get(debugging)
+        data = wtemparser.get(req_id, debugging)
         body = "%s %s 측정자료:\n한강 수온은 %s°C 입니다." % (data[0], data[1], data[2])
+        log.info("[#%s] wtemp@modules/getdata.py: 한강 수온 데이터 가져오기 성공" % req_id)
     except Exception:
-        body = "측정소 또는 서버 오류입니다."
+        log.err("[#%s] wtemp@modules/getdata.py: 한강 수온 데이터 가져오기 실패" % req_id)
+        return "측정소 또는 서버 오류입니다."
     return body
 
 # 날씨 가져오기
-def weather(debugging):
-    weather = weatherparser.parse(debugging)
+def weather(req_id, debugging):
+
+    log.info("[#%s] weather@modules/getdata.py: 날씨 데이터 가져오기 시작" % req_id)
+
+    weather = weatherparser.parse(req_id, debugging)
 
     return_data = ("🌡️ [오늘/내일] 최소/최대 기온: %s℃/%s℃\n\n"  # [오늘/내일]은 상황에 따라 적절히 치환해서 사용
                    "등굣길 예상 날씨: %s\n"
@@ -174,9 +205,11 @@ def weather(debugging):
                       weather['pty'], weather['pop'], weather['reh'])
                    )
 
+    log.info("[#%s] weather@modules/getdata.py: 날씨 데이터 가져오기 성공" % req_id)
+
     return return_data
 
 # 디버그
 if __name__ == "__main__":
     # print(cal_mass(datetime.datetime(2019, 12, 1), datetime.datetime(2020, 2, 29), True))
-    print(tt(3, 11, 2019, 10, 25, True))
+    print(tt(3, 11, 2019, 10, 25, "****DEBUG****", True))

@@ -13,15 +13,19 @@ import json
 from collections import OrderedDict
 import re
 import html
+from modules import log
 
 # 학교코드와 학교종류를 정확히 입력
 school_code = "J100005775"
 school_kind = 3  # 1 유치원, 2 초등학교, 3 중학교, 4 고등학교
 
-def parse(year, month, date, debugging):
-    year = str(year).zfill(2)
+def parse(year, month, day, req_id, debugging):
+    global date
+    year = str(year).zfill(4)
     month = str(month).zfill(2)
-    date = str(date).zfill(2)
+    day = str(day).zfill(2)
+
+    log.info("[#%s] parse@modules/mealparser.py: 급식 파싱 시작(%s-%s-%s)" % (req_id, year, month, day))
 
     try:
         url = urllib.request.urlopen("http://stu.goe.go.kr/sts_sci_md01_001.do?"
@@ -30,8 +34,9 @@ def parse(year, month, date, debugging):
                                      "&schulKndScCode=%s"
                                      "&schMmealScCode=2"
                                      "&schYmd=%s.%s.%s" % (school_code, school_kind, str(school_kind).zfill(2),
-                                                           year, month, date))
+                                                           year, month, day))
     except Exception as error:
+        log.err("[#%s] parse@modules/mealparser.py: 급식 파싱 실패(%s-%s-%s)" % (req_id, year, month, day))
         if debugging:
             print(error)
         return error
@@ -43,15 +48,17 @@ def parse(year, month, date, debugging):
     raw_date = data[0].find_all("th")
     try:
         for i in range(8):
-            if year.zfill(4) + "." + month.zfill(2) + "." + date.zfill(2) in str(raw_date[i]):
+            if year + "." + month + "." + day in str(raw_date[i]):
                 loc = i - 1
                 date = raw_date[i].get_text().strip().replace(".", "-")
                 if debugging:
                     print(loc)
                     print(date)
     except IndexError:
+        log.err("[#%s] parse@modules/mealparser.py: 급식 파싱 실패(%s-%s-%s)" % (req_id, year, month, day))
         return "IndexError"
     if not loc:
+        log.err("[#%s] parse@modules/mealparser.py: 급식 파싱 실패(%s-%s-%s)" % (req_id, year, month, day))
         return ""
 
     # 알레르기정보 선언
@@ -69,9 +76,11 @@ def parse(year, month, date, debugging):
     try:
         menu = str(menu[loc]).replace('<br/>', '.\n')  # 줄바꿈 처리
     except IndexError:
+        log.err("[#%s] parse@modules/mealparser.py: 급식 파싱 실패(%s-%s-%s)" % (req_id, year, month, day))
         return "IndexError"
     menu = html.unescape(re.sub('<.+?>', '', menu).strip())  # 태그 및 HTML 엔티티 처리
     if menu == "":
+        log.info("[#%s] parse@modules/mealparser.py: 급식 정보 없음(%s-%s-%s)" % (req_id, year, month, day))
         return "NoData"
     for i in range(18):
         menu = menu.replace(allergy_filter[i], allergy_string[i]).replace('.\n', ',\n')  # 알러지 처리 및 콤마 찍기
@@ -116,8 +125,10 @@ def parse(year, month, date, debugging):
         json.dump(return_data, make_file, ensure_ascii=False, indent="\t")
         print("File Created")
 
+    log.info("[#%s] parse@modules/mealparser.py: 급식 파싱 성공(%s-%s-%s)" % (req_id, year, month, day))
+
     return 0
 
 # 디버그
 if __name__ == "__main__":
-    parse(2019, 9, 11, True)
+    parse(2019, 9, 11, "****DEBUG****", True)
