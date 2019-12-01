@@ -5,7 +5,7 @@
 # ██║  ██║██████╔╝██║ ╚═╝ ██║███████╗██║  ██║███████╗
 # ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
 # Copyright 2019, Hyungyo Seo
-# modules/ttparser.py - 컴시간 서버에 접속하여 시간표정보를 파싱해오는 스크립트입니다.
+# modules/TTParser.py - 컴시간 서버에 접속하여 시간표정보를 파싱해오는 스크립트입니다.
 
 import urllib.request
 import urllib.parse as urlparse
@@ -24,11 +24,11 @@ school_name = "흥덕중학교"
 def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
     global sunday
     part_code = str()
-    tt_date = datetime.datetime(year, month, date).date()
+    tt_date = datetime.date(year, month, date)
     tt_grade = int(tt_grade)
     tt_class = int(tt_class)
 
-    log.info("[#%s] parse@modules/ttparser.py: 시간표 파싱 시작(%s-%s, %s)" % (req_id, tt_grade, tt_class, tt_date))
+    log.info("[#%s] parse@modules/TTParser.py: Started Parsing Timetable(%s-%s, %s)" % (req_id, tt_grade, tt_class, tt_date))
 
     try:
         search_req = urllib.request.Request(
@@ -44,7 +44,7 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
     except Exception as error:
         if debugging:
             print(error)
-        log.err("[#%s] parse@modules/ttparser.py: 시간표 파싱 실패(%s-%s, %s)" % (req_id, tt_grade, tt_class, tt_date))
+        log.err("[#%s] parse@modules/TTParser.py: Failed to Parse Timetable(%s-%s, %s)" % (req_id, tt_grade, tt_class, tt_date))
         return error
 
     # 학교 검색결과 가져오기
@@ -58,23 +58,9 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
             part_code = i[3]
             break
 
-    # 이번 주 일요일의 날짜를 구함
-    for i in range(6):
-        sunday = datetime.datetime.now() + datetime.timedelta(days=i)
-        if sunday.weekday() == 6:
-            if debugging:
-                print(sunday.date())
-            break
-
-    # 조회하고자 하는 주를 덧붙여 코드 완성
-    if tt_date > sunday.date():
-        code = "34739_%s_0_2" % part_code
-    else:
-        code = "34739_%s_0_1" % part_code
-
     try:
-        fetch_req = urllib.request.Request(
-            'http://comci.kr:4081/98372?' + base64.b64encode(bytes(code, 'utf-8')).decode("utf-8"),
+        fetch_req_1 = urllib.request.Request(
+            'http://comci.kr:4081/98372?' + base64.b64encode(bytes("34739_%s_0_1" % part_code, 'utf-8')).decode("utf-8"),
             data=None,
             headers={
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
@@ -82,19 +68,43 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
             }
         )
 
-        fetch_url = urllib.request.urlopen(fetch_req)
+        fetch_req_2 = urllib.request.Request(
+            'http://comci.kr:4081/98372?' + base64.b64encode(bytes("34739_%s_0_2" % part_code, 'utf-8')).decode("utf-8"),
+            data=None,
+            headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                              'Chrome/78.0.3904.70 Safari/537.36'
+            }
+        )
+
+        fetch_url_1 = urllib.request.urlopen(fetch_req_1)
+        fetch_url_2 = urllib.request.urlopen(fetch_req_2)
     except Exception as error:
         if debugging:
             print(error)
-        log.err("[#%s] parse@modules/ttparser.py: 시간표 파싱 실패(%s-%s, %s)" % (req_id, tt_grade, tt_class, tt_date))
+        log.err("[#%s] parse@modules/TTParser.py: Failed to Parse Timetable(%s-%s, %s)" % (req_id, tt_grade, tt_class, tt_date))
         return error
 
-    fetch_data = json.loads(fetch_url.read().decode('utf-8').replace('\x00', ''))
+    data_1 = json.loads(fetch_url_1.read().decode('utf-8').replace('\x00', ''))
+    data_2 = json.loads(fetch_url_2.read().decode('utf-8').replace('\x00', ''))
 
-    tt = fetch_data["자료14"][tt_grade][tt_class]  # 자료14에 각 반의 일일시간표 정보가 담겨있음
-    og_tt = fetch_data["자료81"][tt_grade][tt_class]  # 자료81에 각 반의 원본시간표 정보가 담겨있음
-    teacher_list = fetch_data["자료46"]  # 교사명단
-    subject_list = fetch_data["자료92"]  # 2글자로 축약한 과목명단 - 전체 명칭은 긴자료92에 담겨있음
+    # 날짜비교 기준일(2번째 자료의 시작일) 파싱
+    data_2_date = data_2["시작일"].split("-")
+    data_2_date = datetime.date(int(data_2_date[0]), int(data_2_date[1]), int(data_2_date[2]))
+
+    # 기준일이 조회일보다 미래이고, 날짜차이가 7일 이내일 때, 첫 번째 자료 선택
+    if data_2_date >= tt_date and (data_2_date - tt_date).days <= 7:
+        data = data_1
+    # 조회일이 기준일보다 미래이고, 날짜차이가 6일 이내일 때, 두 번째 자료 선택
+    elif data_2_date <= tt_date and (tt_date - data_2_date).days <= 6:
+        data = data_2
+    else:
+        return None
+
+    tt = data["자료14"][tt_grade][tt_class]  # 자료14에 각 반의 일일시간표 정보가 담겨있음
+    og_tt = data["자료81"][tt_grade][tt_class]  # 자료81에 각 반의 원본시간표 정보가 담겨있음
+    teacher_list = data["자료46"]  # 교사명단
+    subject_list = data["자료92"]  # 2글자로 축약한 과목명단 - 전체 명칭은 긴자료92에 담겨있음
 
     # 파이썬의 weekday는 월요일부터 시작하지만
     # 컴시간의 weekday는 일요일부터 시작한다
@@ -117,7 +127,7 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
             else:
                 return_data.append("%s(%s)" % (subject, teacher))
 
-    log.info("[#%s] parse@modules/ttparser.py: 시간표 파싱 성공(%s-%s, %s)" % (req_id, tt_grade, tt_class, tt_date))
+    log.info("[#%s] parse@modules/TTParser.py: Succeeded to Parse Timetable(%s-%s, %s)" % (req_id, tt_grade, tt_class, tt_date))
 
     return return_data
 
