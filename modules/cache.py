@@ -19,13 +19,13 @@ def purge(req_id, debugging):
         for file in file_list:
             os.remove("data/cache/" + file)
     except Exception as error:
-        log.err("[#%s] purge@modules/cache.py: 캐시삭제 실패" % req_id)
+        log.err("[#%s] purge@modules/cache.py: Failed to Purge Cache" % req_id)
         if debugging:
             dict_data["status"] = error
         dict_data["status"] = "Error"
         return dict_data
     dict_data["status"] = "OK"
-    log.info("[#%s] purge@modules/cache.py: 캐시삭제 성공" % req_id)
+    log.info("[#%s] purge@modules/cache.py: Succeeded to Purge Cache" % req_id)
     return dict_data
 
 
@@ -39,5 +39,5 @@ def get(req_id, debugging):
             if debugging:
                 print(filename)
             return_data = "%s\n%s" % (return_data, filename.replace(".json", ""))
-    log.info("[#%s] get@modules/cache.py: 캐시조회 성공" % req_id)
+    log.info("[#%s] get@modules/cache.py: Succeeded to Fetch Cache List" % req_id)
     return return_data

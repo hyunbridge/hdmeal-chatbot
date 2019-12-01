@@ -5,7 +5,7 @@
 # ██║  ██║██████╔╝██║ ╚═╝ ██║███████╗██║  ██║███████╗
 # ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
 # Copyright 2019, Hyungyo Seo
-# modules/calendarparser.py - NEIS 서버에 접속하여 급식정보를 파싱해오는 스크립트입니다.
+# modules/scheduleParser.py - NEIS 서버에 접속하여 급식정보를 파싱해오는 스크립트입니다.
 
 import urllib.request
 from bs4 import BeautifulSoup
@@ -20,7 +20,7 @@ def parse(year, month, req_id, debugging):
     year = str(year).zfill(4)
     month = str(month).zfill(2)
 
-    log.info("[#%s] parse@modules/calendarparser.py: 학사일정 파싱 시작(%s-%s)" % (req_id, year, month))
+    log.info("[#%s] parse@modules/scheduleParser.py: Started Parsing Schedule(%s-%s)" % (req_id, year, month))
 
     try:
         url = ("http://stu.goe.go.kr/sts_sci_sf01_001.do?"
@@ -57,7 +57,7 @@ def parse(year, month, req_id, debugging):
             json.dump(calendar, make_file, ensure_ascii=False, indent="\t")
             print("File Created")
 
-    log.info("[#%s] parse@modules/calendarparser.py: 학사일정 파싱 성공(%s-%s)" % (req_id, year, month))
+    log.info("[#%s] parse@modules/scheduleParser.py: Succeeded to Parse Schedule(%s-%s)" % (req_id, year, month))
 
     return 0
 

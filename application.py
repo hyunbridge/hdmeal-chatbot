@@ -8,7 +8,7 @@
 
 from flask import Flask
 from flask_restful import request, Api, Resource
-from modules import getdata, skill, fb, log
+from modules import getData, skill, FB, log
 import datetime
 import random
 
@@ -36,13 +36,13 @@ log.init()
 app = Flask(__name__)
 api = Api(app)
 
-log.info("서버 시작됨")
+log.info("Server Started")
 
 # 특정 날짜 식단 조회
 class Date(Resource):
     @request_id
     def get(self, year, month, date):
-        return getdata.meal(year, month, date, req_id, debugging)
+        return getData.meal(year, month, date, req_id, debugging)
 
 # Skill 식단 조회
 class Meal(Resource):
@@ -117,7 +117,7 @@ class Cal(Resource):
     @staticmethod
     @request_id
     def post():
-        return skill.cal(request.data, req_id, debugging)
+        return skill.schdl(request.data, req_id, debugging)
 
 
 # 페이스북 포스팅
@@ -126,9 +126,9 @@ class FB(Resource):
     @request_id
     def post():
         if "X-FB-Token" in request.headers:
-            return fb.publish(request.headers["X-FB-Token"], req_id, debugging)
+            return FB.publish(request.headers["X-FB-Token"], req_id, debugging)
         else:
-            return fb.publish('', req_id, debugging)
+            return FB.publish('', req_id, debugging)
 
 
 # 급식봇 브리핑
@@ -156,4 +156,5 @@ api.add_resource(Briefing, '/briefing/')
 
 # 서버 실행
 if __name__ == '__main__':
+    debugging = True
     app.run(debug=debugging)

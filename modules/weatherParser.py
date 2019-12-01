@@ -5,7 +5,7 @@
 # ██║  ██║██████╔╝██║ ╚═╝ ██║███████╗██║  ██║███████╗
 # ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
 # Copyright 2019, Hyungyo Seo
-# modules/weatherparser.py - 컴시간 서버에 접속하여 시간표정보를 파싱해오는 스크립트입니다.
+# modules/weatherParser.py - 컴시간 서버에 접속하여 시간표정보를 파싱해오는 스크립트입니다.
 
 import urllib.request
 import xml.etree.ElementTree
@@ -16,7 +16,7 @@ region = "4146351500"
 
 def parse(req_id, debugging):
 
-    log.info("[#%s] parse@modules/weatherparser.py: 날씨 파싱 시작" % req_id)
+    log.info("[#%s] parse@modules/weatherParser.py: Started Parsing Weather" % req_id)
 
     try:
         url = urllib.request.urlopen("https://www.kma.go.kr/wid/queryDFSRSS.jsp"
@@ -24,7 +24,7 @@ def parse(req_id, debugging):
     except Exception as error:
         if debugging:
             print(error)
-        log.err("[#%s] parse@modules/weatherparser.py: 날씨 파싱 실패" % req_id)
+        log.err("[#%s] parse@modules/weatherParser.py: Failed" % req_id)
         return error
 
     data = xml.etree.ElementTree.fromstring(url.read().decode('utf-8')).findall('.//data')
@@ -74,15 +74,15 @@ def parse(req_id, debugging):
         weather['sky'] = sky[int(weather['sky'])-1]  # 1부터 시작
     else:
         weather['sky'] = '⚠ 오류'
-        log.err("[#%s] parse@modules/weatherparser.py: 하늘 상태 파싱 실패" % req_id)
+        log.err("[#%s] parse@modules/weatherParser.py: Failed to Parse Sky" % req_id)
 
     # 강수 형태 대응값 적용
     if int(weather['pty']) < 4:
         weather['pty'] = pty[int(weather['pty'])]
     else:
         weather['pty'] = '⚠ 오류'
-        log.err("[#%s] parse@modules/weatherparser.py: 강수 형태 파싱 실패" % req_id)
-    log.info("[#%s] parse@modules/weatherparser.py: 날씨 파싱 성공" % req_id)
+        log.err("[#%s] parse@modules/weatherParser.py: Failed to Parse Precipitation Type" % req_id)
+    log.info("[#%s] parse@modules/weatherParser.py: Succeeded" % req_id)
     return weather
 
 # 디버그
