@@ -90,7 +90,10 @@ def tt(tt_grade, tt_class, year, month, date, req_id, debugging):
     # 본문 작성
     body = str()
     for i in range(len(data)):
-        body = body + "\n%s교시: %s" % (i+1, data[i])
+        if "[MSG]" in data[i]:  # 파서 메세지에는 아무것도 붙이지 않음
+            body = body + "\n%s" % data[i].replace("[MSG]", "")
+        else:
+            body = body + "\n%s교시: %s" % (i+1, data[i])
 
     log.info("[#%s] tt@modules/getData.py: Succeeded to Fetch Timetable Data(%s-%s, %s-%s-%s)"
              % (req_id, tt_grade, tt_class, year, month, date))

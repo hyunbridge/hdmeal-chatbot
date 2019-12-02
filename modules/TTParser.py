@@ -123,9 +123,23 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
             subject = subject_list[int(str(tt[comci_weekday][i])[-2:])]  # 뒤의 2자리는 과목명을 나타냄
             teacher = teacher_list[int(str(tt[comci_weekday][i])[:-2])]  # 나머지 숫자는 교사명을 나타냄
             if not tt[comci_weekday][i] == og_tt[comci_weekday][i]:
-                return_data.append("⭐%s(%s)" % (subject, teacher))
+                return_data.append("⭐%s(%s)" % (subject, teacher))  # 시간표 변경사항 표시
             else:
                 return_data.append("%s(%s)" % (subject, teacher))
+
+    # 단축수업, 연장수업 표시
+    tt_num, og_tt_num = 0, 0
+    for i in range(1, 9):  # 교시수 구하기
+        if not tt[comci_weekday][i] and not tt_num:
+            tt_num = i - 1
+        if not og_tt[comci_weekday][i] and not og_tt_num:
+            og_tt_num = i - 1
+    if tt_num == og_tt_num:
+        pass
+    elif tt_num < og_tt_num:
+        return_data.append("[MSG]⭐단축수업이 있습니다. (%s교시 → %s교시)" % (og_tt_num, tt_num))
+    elif tt_num > og_tt_num:
+        return_data.append("[MSG]⭐연장수업이 있습니다. (%s교시 → %s교시)" % (og_tt_num, tt_num))
 
     log.info("[#%s] parse@modules/TTParser.py: Succeeded to Parse Timetable(%s-%s, %s)" % (req_id, tt_grade, tt_class, tt_date))
 
