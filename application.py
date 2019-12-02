@@ -121,7 +121,7 @@ class Cal(Resource):
 
 
 # 페이스북 포스팅
-class FB(Resource):
+class Facebook(Resource):
     @staticmethod
     @request_id
     def post():
@@ -151,7 +151,7 @@ api.add_resource(ManageUser, '/user/manage/')
 api.add_resource(DeleteUser, '/user/delete/')
 api.add_resource(WTemp, '/wtemp/')
 api.add_resource(Cal, '/cal/')
-api.add_resource(FB, '/fb/')
+api.add_resource(Facebook, '/fb/')
 api.add_resource(Briefing, '/briefing/')
 
 # 서버 실행
