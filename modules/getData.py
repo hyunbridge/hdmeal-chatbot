@@ -215,7 +215,7 @@ def wtemp(req_id, debugging):
         if (datetime.datetime.now() - datetime.datetime.fromtimestamp(data["timestamp"])
                 < datetime.timedelta(minutes=76)):  # 실시간수질정보시스템상 자료처리 시간 고려, 유효기간 76분으로 설정
             date = datetime.datetime.fromtimestamp(data["timestamp"])
-            temp = data["temp"]
+            temp = data["temp"] + "°C"
         else:  # 캐시 무효하면
             parse()  # 파싱
     else:  # 캐시 없으면
