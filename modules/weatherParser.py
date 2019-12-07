@@ -46,7 +46,6 @@ def parse(req_id, debugging):
             weather['pop'] = data[i].find('pop').text
             # 습도
             weather['reh'] = data[i].find('reh').text
-            loc = i
             break
 
     if not weather:  # 날씨데이터 없을 경우(다음날 9시로 밀린 경우) 그 다음 데이터를 취함

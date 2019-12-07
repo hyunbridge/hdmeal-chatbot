@@ -29,7 +29,6 @@ def meal(year, month, date, req_id, debugging):
             log.info("[#%s] meal@modules/getData.py: No Meal Data(%s-%s-%s)" % (req_id, year, month, date))
             return {"message": "등록된 데이터가 없습니다."}
 
-    json_data = OrderedDict()
     try:
         with open('data/cache/' + year + '-' + month + '-' + date + '.json',
                   encoding="utf-8") as data_file:
@@ -179,16 +178,59 @@ def schdl_mass(start, end, req_id, debugging):
 
 # 한강 수온 가져오기
 def wtemp(req_id, debugging):
-
     log.info("[#%s] wtemp@modules/getData.py: Started Fetching Water Temperature Data" % req_id)
+    global date, temp
 
-    try:
-        data = WTempParser.get(req_id, debugging)
-        body = "%s %s 측정자료:\n한강 수온은 %s°C 입니다." % (data[0], data[1], data[2])
-        log.info("[#%s] wtemp@modules/getData.py: Succeeded to Fetch Water Temperature Data" % req_id)
-    except Exception:
-        log.err("[#%s] wtemp@modules/getData.py: Failed to Fetch Water Temperature Data" % req_id)
-        return "측정소 또는 서버 오류입니다."
+    def parse():
+        log.info("[#%s] wtemp@modules/getData.py: Started Parsing Water Temperature Data" % req_id)
+        try:
+            global date, temp
+            parser = WTempParser.get(req_id, debugging)
+            date = parser[0]
+            temp = parser[1]
+        except Exception:
+            log.err("[#%s] wtemp@modules/getData.py: Failed to Fetch Water Temperature Data" % req_id)
+            return "측정소 또는 서버 오류입니다."
+        with open('data/cache/wtemp.json', 'w',
+                  encoding="utf-8") as make_file:  # 캐시 만들기
+            json.dump({"timestamp": date.timestamp(), "temp": temp}, make_file, ensure_ascii=False, indent="\t")
+            print("File Created")
+
+    if os.path.isfile('data/cache/wtemp.json'):  # 캐시 있으면
+        try:
+            log.info("[#%s] wtemp@modules/getData.py: Read Data in Cache" % req_id)
+            with open('data/cache/wtemp.json', encoding="utf-8") as data_file:  # 캐시 읽기
+                data = json.load(data_file, object_pairs_hook=OrderedDict)
+        except Exception:  # 캐시 읽을 수 없으면
+            try:
+                os.remove('data/cache/wtemp.json')  # 캐시 삭제
+            except Exception:
+                log.err("[#%s] wtemp@modules/getData.py: Failed to Delete Cache" % req_id)
+                return "측정소 또는 서버 오류입니다."
+            parse()  # 파싱
+        # 캐시 유효하면
+        if datetime.datetime.now() - datetime.datetime.fromtimestamp(data["timestamp"]) < datetime.timedelta(hours=1):
+            date = datetime.datetime.fromtimestamp(data["timestamp"])
+            temp = data["temp"]
+        else:  # 캐시 무효하면
+            parse()  # 파싱
+    else:  # 캐시 없으면
+        parse()  # 파싱
+
+    time = date.hour
+    # 24시간제 -> 12시간제 변환
+    if time == 0 or time == 24:  # 자정
+        time = "오전 12시"
+    elif time < 12:  # 오전
+        time = "오전 %s시" % time
+    elif time == 12:  # 정오
+        time = "오후 12시"
+    else:  # 오후
+        time = "오후 %s시" % (time - 12)
+
+    body = "%s %s 측정자료:\n한강 수온은 %s°C 입니다." % (date.date(), time, temp)
+    log.info("[#%s] wtemp@modules/getData.py: Succeeded to Fetch Water Temperature Data" % req_id)
+
     return body
 
 # 날씨 가져오기

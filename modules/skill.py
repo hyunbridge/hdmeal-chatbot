@@ -364,6 +364,8 @@ def wtemp(req_id, debugging):
 # 급식봇 브리핑
 def briefing(reqdata, req_id, debugging,):
     log.info("[#%s] briefing@modules/skill.py: New Request" % req_id)
+    global header, hd_err, schdl, weather, meal, tt
+
     if datetime.datetime.now().time() >= datetime.time(11):  # 11시 이후이면
         # 내일을 기준일로 설정
         date = datetime.datetime.now() + datetime.timedelta(days=1)
