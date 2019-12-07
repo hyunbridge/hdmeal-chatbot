@@ -191,10 +191,13 @@ def wtemp(req_id, debugging):
         except Exception:
             log.err("[#%s] wtemp@modules/getData.py: Failed to Fetch Water Temperature Data" % req_id)
             return "측정소 또는 서버 오류입니다."
-        with open('data/cache/wtemp.json', 'w',
-                  encoding="utf-8") as make_file:  # 캐시 만들기
-            json.dump({"timestamp": date.timestamp(), "temp": temp}, make_file, ensure_ascii=False, indent="\t")
-            print("File Created")
+        if not temp.isalpha():  # 무효값 걸러냄(값이 유효할 경우에만 캐싱)
+            with open('data/cache/wtemp.json', 'w',
+                      encoding="utf-8") as make_file:  # 캐시 만들기
+                json.dump({"timestamp": date.timestamp(), "temp": temp}, make_file, ensure_ascii=False, indent="\t")
+                print("File Created")
+                temp = temp + "°C"
+        log.info("[#%s] wtemp@modules/getData.py: Succeeded to Parse Water Temperature Data" % req_id)
 
     if os.path.isfile('data/cache/wtemp.json'):  # 캐시 있으면
         try:
@@ -209,7 +212,8 @@ def wtemp(req_id, debugging):
                 return "측정소 또는 서버 오류입니다."
             parse()  # 파싱
         # 캐시 유효하면
-        if datetime.datetime.now() - datetime.datetime.fromtimestamp(data["timestamp"]) < datetime.timedelta(hours=1):
+        if (datetime.datetime.now() - datetime.datetime.fromtimestamp(data["timestamp"])
+                < datetime.timedelta(minutes=76)):  # 실시간수질정보시스템상 자료처리 시간 고려, 유효기간 76분으로 설정
             date = datetime.datetime.fromtimestamp(data["timestamp"])
             temp = data["temp"]
         else:  # 캐시 무효하면
@@ -228,7 +232,7 @@ def wtemp(req_id, debugging):
     else:  # 오후
         time = "오후 %s시" % (time - 12)
 
-    body = "%s %s 측정자료:\n한강 수온은 %s°C 입니다." % (date.date(), time, temp)
+    body = "%s %s 측정자료:\n한강 수온은 %s 입니다." % (date.date(), time, temp)
     log.info("[#%s] wtemp@modules/getData.py: Succeeded to Fetch Water Temperature Data" % req_id)
 
     return body
