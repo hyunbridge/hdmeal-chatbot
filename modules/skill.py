@@ -379,6 +379,11 @@ def wtemp(req_id, debugging):
 def briefing(reqdata, req_id, debugging,):
     log.info("[#%s] briefing@modules/skill.py: New Request" % req_id)
     global header, hd_err, schdl, weather, meal, tt
+    header = "일시적인 서버 오류로 헤더를 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
+    schdl = "일시적인 서버 오류로 학사일정을 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
+    weather = "일시적인 서버 오류로 날씨를 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
+    meal = "일시적인 서버 오류로 식단을 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
+    tt = "일시적인 서버 오류로 시간표를 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
 
     if datetime.datetime.now().time() >= datetime.time(11):  # 11시 이후이면
         # 내일을 기준일로 설정
@@ -429,7 +434,10 @@ def briefing(reqdata, req_id, debugging,):
     @logging_time
     def f_weather():
         global weather
-        weather = getData.weather(req_id, debugging).replace('[오늘/내일]', date_ko)
+        try:
+            weather = str(getData.weather(req_id, debugging).replace('[오늘/내일]', date_ko))
+        except TypeError:
+            weather = "일시적인 서버 오류로 날씨를 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
 
     # 세 번째 말풍선
     # 급식
