@@ -194,7 +194,7 @@ def wtemp(req_id, debugging):
         if not temp.isalpha():  # 무효값 걸러냄(값이 유효할 경우에만 캐싱)
             with open('data/cache/wtemp.json', 'w',
                       encoding="utf-8") as make_file:  # 캐시 만들기
-                json.dump({"timestamp": date.timestamp(), "temp": temp}, make_file, ensure_ascii=False, indent="\t")
+                json.dump({"timestamp": int(date.timestamp()), "temp": temp}, make_file, ensure_ascii=False, indent="\t")
                 print("File Created")
                 temp = temp + "°C"
         log.info("[#%s] wtemp@modules/getData.py: Succeeded to Parse Water Temperature Data" % req_id)
@@ -214,11 +214,14 @@ def wtemp(req_id, debugging):
         # 캐시 유효하면
         if (datetime.datetime.now() - datetime.datetime.fromtimestamp(data["timestamp"])
                 < datetime.timedelta(minutes=76)):  # 실시간수질정보시스템상 자료처리 시간 고려, 유효기간 76분으로 설정
+            log.info("[#%s] wtemp@modules/getData.py: Use Data in Cache" % req_id)
             date = datetime.datetime.fromtimestamp(data["timestamp"])
             temp = data["temp"] + "°C"
         else:  # 캐시 무효하면
+            log.info("[#%s] wtemp@modules/getData.py: Cache Expired" % req_id)
             parse()  # 파싱
     else:  # 캐시 없으면
+        log.info("[#%s] temp@modules/getData.py: No Cache" % req_id)
         parse()  # 파싱
 
     time = date.hour
