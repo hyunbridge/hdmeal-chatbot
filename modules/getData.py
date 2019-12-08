@@ -242,10 +242,51 @@ def wtemp(req_id, debugging):
 
 # 날씨 가져오기
 def weather(req_id, debugging):
-
+    global weather
+    now = datetime.datetime.now()
     log.info("[#%s] weather@modules/getData.py: Started Fetching Weather Data" % req_id)
 
-    weather = weatherParser.parse(req_id, debugging)
+    # 날씨 파싱 후 캐싱
+    def parse():
+        global weather
+
+        log.info("[#%s] weather@modules/getData.py: Started Parsing Weather Data" % req_id)
+
+        weather = weatherParser.parse(req_id, debugging)
+
+        # 지금의 날짜와 시간까지만 취함
+        weather["Timestamp"] = int(datetime.datetime(now.year, now.month, now.day, now.hour).timestamp())
+
+        with open('data/cache/weather.json', 'w',
+                  encoding="utf-8") as make_file:  # 캐시 만들기
+            json.dump(weather, make_file, ensure_ascii=False, indent="\t")
+            print("File Created")
+
+        log.info("[#%s] weather@modules/getData.py: Succeeded to Parse Weather Data" % req_id)
+
+    if os.path.isfile('data/cache/weather.json'):  # 캐시 있으면
+        try:
+            log.info("[#%s] weather@modules/getData.py: Read Data in Cache" % req_id)
+            with open('data/cache/weather.json', encoding="utf-8") as data_file:  # 캐시 읽기
+                data = json.load(data_file, object_pairs_hook=OrderedDict)
+        except Exception:  # 캐시 읽을 수 없으면
+            try:
+                os.remove('data/cache/weather.json')  # 캐시 삭제
+            except Exception:
+                log.err("[#%s] weather@modules/getData.py: Failed to Delete Cache" % req_id)
+                return "측정소 또는 서버 오류입니다."
+            parse()  # 파싱
+        # 캐시 유효하면
+        if now - datetime.datetime.fromtimestamp(data["Timestamp"]) < datetime.timedelta(hours=1):
+            global weather
+            log.info("[#%s] weather@modules/getData.py: Use Data in Cache" % req_id)
+            weather = data
+        else:  # 캐시 무효하면
+            log.info("[#%s] weather@modules/getData.py: Cache Expired" % req_id)
+            parse()  # 파싱
+    else:  # 캐시 없으면
+        log.info("[#%s] weather@modules/getData.py: No Cache" % req_id)
+        parse()  # 파싱
 
     return_data = ("🌡️ [오늘/내일] 최소/최대 기온: %s℃/%s℃\n\n"  # [오늘/내일]은 상황에 따라 적절히 치환해서 사용
                    "등굣길 예상 날씨: %s\n"

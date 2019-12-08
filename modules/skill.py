@@ -293,6 +293,20 @@ def purge_cache(reqdata, req_id, debugging):
         msg = "사용자 인증에 실패하였습니다.\n당신의 UID는 %s 입니다." % uid
     return skill(msg)
 
+# 캐시 상태확인
+def check_cache(reqdata, req_id, debugging):
+    log.info("[#%s] check_cache@modules/skill.py: New Request" % req_id)
+    # 사용자 ID 가져오고 검증
+    uid = json.loads(reqdata)["userRequest"]["user"]["id"]
+    if user.auth_admin(uid, req_id, debugging):
+        health = cache.health_check(req_id, debugging)
+        msg = "시간표: %s\n한강 수온: %s\n날씨: %s" % (
+            health["Timetable"], health["HanRiverTemperature"], health["Weather"])
+    else:
+        log.info("[#%s] check_cache@modules/skill.py: Non-Authorized User" % req_id)
+        msg = "사용자 인증에 실패하였습니다.\n당신의 UID는 %s 입니다." % uid
+    return skill(msg)
+
 
 # 사용자 관리
 def manage_user(reqdata, req_id, debugging):

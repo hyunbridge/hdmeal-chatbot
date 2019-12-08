@@ -34,7 +34,7 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
         "[#%s] parse@modules/TTParser.py: Started Parsing Timetable(%s-%s, %s)" % (req_id, tt_grade, tt_class, tt_date))
 
     # 데이터 가져오기
-    def parse():
+    def fetch():
         global part_code, data_1, data_2
 
         # 학교명으로 검색해 학교코드 알아내기
@@ -52,7 +52,7 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
         except Exception as error:
             if debugging:
                 print(error)
-            log.err("[#%s] parse@modules/TTParser.py: Failed to Parse Timetable(%s-%s, %s)" % (
+            log.err("[#%s] fetch.parse@modules/TTParser.py: Failed to Parse Timetable(%s-%s, %s)" % (
                 req_id, tt_grade, tt_class, tt_date))
             return error
 
@@ -95,7 +95,7 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
         except Exception as error:
             if debugging:
                 print(error)
-            log.err("[#%s] parse@modules/TTParser.py: Failed to Parse Timetable(%s-%s, %s)" %
+            log.err("[#%s] fetch.parse@modules/TTParser.py: Failed to Parse Timetable(%s-%s, %s)" %
                     (req_id, tt_grade, tt_class, tt_date))
             return error
 
@@ -139,16 +139,16 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
             except Exception as error:
                 log.err("[#%s] parse@modules/TTParser.py: Failed to Delete Cache" % req_id)
                 return error
-            parse()  # 파싱
+            fetch()  # 파싱
         # 캐시 유효하면
         if datetime.datetime.now() - datetime.datetime.fromtimestamp(data["Timestamp"]) < datetime.timedelta(hours=3):
             log.info("[#%s] parse@modules/TTParser.py: Use Data in Cache" % req_id)
         else:  # 캐시 무효하면
             log.info("[#%s] parse@modules/TTParser.py: Cache Expired" % req_id)
-            parse()  # 파싱
+            fetch()  # 파싱
     else:  # 캐시 없으면
         log.info("[#%s] parse@modules/TTParser.py: No Cache" % req_id)
-        parse()  # 파싱
+        fetch()  # 파싱
 
     # 날짜비교 기준일(2번째 자료의 시작일) 파싱
     data_2_date = data_2["시작일"].split("-")
