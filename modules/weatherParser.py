@@ -32,6 +32,8 @@ def parse(req_id, debugging):
     weather = dict()
     for i in range(6):
         if data[i].find('hour').text == '9':  # 9시 찾기
+            # 위치
+            weather['loc'] = i
             # 시간
             weather['hour'] = data[i].find('hour').text
             # 기온/최대 기온/최소 기온
@@ -49,6 +51,8 @@ def parse(req_id, debugging):
             break
 
     if not weather:  # 날씨데이터 없을 경우(다음날 9시로 밀린 경우) 그 다음 데이터를 취함
+        # 위치
+        weather['loc'] = 0
         # 시간
         weather['hour'] = data[0].find('hour').text
         # 기온/최대 기온/최소 기온
@@ -63,6 +67,11 @@ def parse(req_id, debugging):
         weather['pop'] = data[0].find('pop').text
         # 습도
         weather['reh'] = data[0].find('reh').text
+
+    weather['1st_hour'] = data[0].find('hour').text
+
+    if weather['1st_hour'] == "24":
+        weather['1st_hour'] = "0"
 
     # 하늘 상태, 강수 형태 대응값
     sky = ['☀ 맑음', '🌤️ 구름 조금', '🌥️ 구름 많음', '☁ 흐림']
