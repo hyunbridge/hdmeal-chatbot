@@ -57,7 +57,7 @@ def parse(year, month, req_id, debugging):
             json.dump(calendar, make_file, ensure_ascii=False, indent="\t")
             print("File Created")
 
-    log.info("[#%s] parse@modules/scheduleParser.py: Succeeded to Parse Schedule(%s-%s)" % (req_id, year, month))
+    log.info("[#%s] parse@modules/scheduleParser.py: Succeeded(%s-%s)" % (req_id, year, month))
 
     return 0
 

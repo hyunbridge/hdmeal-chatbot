@@ -401,7 +401,7 @@ def briefing(reqdata, req_id, debugging,):
             result = original_fn(*args, **kwargs)
             if debugging:
                 start_time = time.time()
-                print("{} 실행시작".format(original_fn.__name__))
+                print("{} 실행.".format(original_fn.__name__))
                 end_time = time.time()
                 print("{} 종료. 실행시간: {} 초".format(original_fn.__name__, end_time - start_time))
             return result
@@ -434,10 +434,7 @@ def briefing(reqdata, req_id, debugging,):
     @logging_time
     def f_weather():
         global weather
-        try:
-            weather = str(getData.weather(req_id, debugging).replace('[오늘/내일]', date_ko))
-        except TypeError:
-            weather = "일시적인 서버 오류로 날씨를 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
+        weather = getData.weather(date_ko, req_id, debugging)
 
     # 세 번째 말풍선
     # 급식

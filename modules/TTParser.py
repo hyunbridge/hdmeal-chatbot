@@ -203,8 +203,8 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
     elif tt_num > og_tt_num:
         return_data.append("[MSG]⭐연장수업이 있습니다. (%s교시 → %s교시)" % (og_tt_num, tt_num))
 
-    log.info("[#%s] parse@modules/TTParser.py: Succeeded to Parse Timetable(%s-%s, %s)" % (
-    req_id, tt_grade, tt_class, tt_date))
+    log.info("[#%s] parse@modules/TTParser.py: Succeeded(%s-%s, %s)" % (
+        req_id, tt_grade, tt_class, tt_date))
 
     return return_data
 
