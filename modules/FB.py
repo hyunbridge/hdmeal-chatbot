@@ -46,10 +46,10 @@ def publish(fb_token, req_id, debugging):
         tmpl = Image.open('data/FB_Template.png')
         pmap_tmpl = tmpl.load()
     except FileNotFoundError:
-        log.err("[#%s] publish@modules/FB.py: Failed to Publish" % req_id)
+        log.err("[#%s] publish@modules/FB.py: Failed" % req_id)
         return {"Parser": "OK", "IMG": "Missing File"}, 500
     except Exception:
-        log.err("[#%s] publish@modules/FB.py: Failed to Publish" % req_id)
+        log.err("[#%s] publish@modules/FB.py: Failed" % req_id)
         return {"Parser": "OK", "IMG": "FAIL"}, 500
 
     # 이미지 생성
@@ -105,7 +105,7 @@ def publish(fb_token, req_id, debugging):
         fb = "No Token"
 
     # OK 반환
-    log.info("[#%s] publish@modules/FB.py: Succeeded to Publish" % req_id)
+    log.info("[#%s] publish@modules/FB.py: Succeeded" % req_id)
     return {"Parser": "OK", "IMG": "OK", "fb": fb}, status
 
 # 디버그

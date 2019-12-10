@@ -96,11 +96,12 @@ class CacheHealthCheck(Resource):
         return cache.health_check(req_id, debugging)
 
 # 캐시 상태확인(Skill)
-class CacheHealthCheck_Skill(Resource):
+class CacheHealthCheckSkill(Resource):
     @staticmethod
     @request_id
     def post():
         return skill.check_cache(request.data, req_id, debugging)
+
 
 # 사용자 관리
 class ManageUser(Resource):
@@ -161,7 +162,7 @@ api.add_resource(TimetableRegistered, '/tt/registered/')
 api.add_resource(ListCache, '/cache/list/')
 api.add_resource(PurgeCache, '/cache/purge/')
 api.add_resource(CacheHealthCheck, '/cache/healthcheck/')
-api.add_resource(CacheHealthCheck_Skill, '/cache/healthcheck/skill/')
+api.add_resource(CacheHealthCheckSkill, '/cache/healthcheck/skill/')
 api.add_resource(ManageUser, '/user/manage/')
 api.add_resource(DeleteUser, '/user/delete/')
 api.add_resource(WTemp, '/wtemp/')

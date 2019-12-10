@@ -39,7 +39,7 @@ def meal(year, month, date, req_id, debugging):
             print("FileNotFound")
         log.info("[#%s] meal@modules/getData.py: No Meal Data(%s-%s-%s)" % (req_id, year, month, date))
         return {"message": "등록된 데이터가 없습니다."}
-    log.info("[#%s] meal@modules/getData.py: Succeeded to Fetch Meal Data(%s-%s-%s)" % (req_id, year, month, date))
+    log.info("[#%s] meal@modules/getData.py: Succeeded(%s-%s-%s)" % (req_id, year, month, date))
     return json_data
 
 
@@ -94,7 +94,7 @@ def tt(tt_grade, tt_class, year, month, date, req_id, debugging):
         else:
             body = body + "\n%s교시: %s" % (i+1, data[i])
 
-    log.info("[#%s] tt@modules/getData.py: Succeeded to Fetch Timetable Data(%s-%s, %s-%s-%s)"
+    log.info("[#%s] tt@modules/getData.py: Succeeded(%s-%s, %s-%s-%s)"
              % (req_id, tt_grade, tt_class, year, month, date))
 
     return header + body
@@ -125,7 +125,7 @@ def schdl(year, month, date, req_id, debugging):
 
     # 일정 있는지 확인
     if date in data:
-        log.info("[#%s] schdl@modules/getData.py: Succeeded to Fetch Schedule Data(%s-%s-%s)" % (req_id, year, month, date))
+        log.info("[#%s] schdl@modules/getData.py: Succeeded(%s-%s-%s)" % (req_id, year, month, date))
         return data[date]
     log.info("[#%s] schdl@modules/getData.py: No Schedule Data(%s-%s-%s)" % (req_id, year, month, date))
     return "일정이 없습니다."
@@ -171,7 +171,7 @@ def schdl_mass(start, end, req_id, debugging):
 
         schdl.append((i[0], i[1], i[2], body))  # 년, 월, 일, 일정
 
-    log.info("[#%s] schdl_mass@modules/getData.py: Succeeded to Fetch Mass Schedule Data(%s ~ %s)" % (req_id, start, end))
+    log.info("[#%s] schdl_mass@modules/getData.py: Succeeded(%s ~ %s)" % (req_id, start, end))
 
     return schdl
 
@@ -197,7 +197,7 @@ def wtemp(req_id, debugging):
                 json.dump({"timestamp": int(date.timestamp()), "temp": temp}, make_file, ensure_ascii=False, indent="\t")
                 print("File Created")
                 temp = temp + "°C"
-        log.info("[#%s] wtemp@modules/getData.py: Succeeded to Parse Water Temperature Data" % req_id)
+        log.info("[#%s] wtemp@modules/getData.py: Succeeded" % req_id)
 
     if os.path.isfile('data/cache/wtemp.json'):  # 캐시 있으면
         try:
@@ -236,33 +236,33 @@ def wtemp(req_id, debugging):
         time = "오후 %s시" % (time - 12)
 
     body = "%s %s 측정자료:\n한강 수온은 %s 입니다." % (date.date(), time, temp)
-    log.info("[#%s] wtemp@modules/getData.py: Succeeded to Fetch Water Temperature Data" % req_id)
+    log.info("[#%s] wtemp@modules/getData.py: Succeeded" % req_id)
 
     return body
 
 # 날씨 가져오기
-def weather(req_id, debugging):
-    global weather
+def weather(date_ko, req_id, debugging):
+    global weather_data
     now = datetime.datetime.now()
     log.info("[#%s] weather@modules/getData.py: Started Fetching Weather Data" % req_id)
 
     # 날씨 파싱 후 캐싱
     def parse():
-        global weather
+        global weather_data
 
         log.info("[#%s] weather@modules/getData.py: Started Parsing Weather Data" % req_id)
 
-        weather = weatherParser.parse(req_id, debugging)
+        weather_data = weatherParser.parse(req_id, debugging)
 
         # 지금의 날짜와 시간까지만 취함
-        weather["Timestamp"] = int(datetime.datetime(now.year, now.month, now.day, now.hour).timestamp())
+        weather_data["Timestamp"] = int(datetime.datetime(now.year, now.month, now.day, now.hour).timestamp())
 
         with open('data/cache/weather.json', 'w',
                   encoding="utf-8") as make_file:  # 캐시 만들기
-            json.dump(weather, make_file, ensure_ascii=False, indent="\t")
+            json.dump(weather_data, make_file, ensure_ascii=False, indent="\t")
             print("File Created")
 
-        log.info("[#%s] weather@modules/getData.py: Succeeded to Parse Weather Data" % req_id)
+        log.info("[#%s] weather@modules/getData.py: Succeeded" % req_id)
 
     if os.path.isfile('data/cache/weather.json'):  # 캐시 있으면
         try:
@@ -278,9 +278,9 @@ def weather(req_id, debugging):
             parse()  # 파싱
         # 캐시 유효하면
         if now - datetime.datetime.fromtimestamp(data["Timestamp"]) < datetime.timedelta(hours=1):
-            global weather
+            global weather_data
             log.info("[#%s] weather@modules/getData.py: Use Data in Cache" % req_id)
-            weather = data
+            weather_data = data
         else:  # 캐시 무효하면
             log.info("[#%s] weather@modules/getData.py: Cache Expired" % req_id)
             parse()  # 파싱
@@ -288,21 +288,23 @@ def weather(req_id, debugging):
         log.info("[#%s] weather@modules/getData.py: No Cache" % req_id)
         parse()  # 파싱
 
-    return_data = ("🌡️ [오늘/내일] 최소/최대 기온: %s℃/%s℃\n\n"  # [오늘/내일]은 상황에 따라 적절히 치환해서 사용
+    return_data = ("🌡️ %s 최소/최대 기온: %s℃/%s℃\n\n"
                    "등굣길 예상 날씨: %s\n"
                    "🌡️ 기온: %s℃\n"
                    "🌦️ 강수 형태: %s\n"
                    "❔ 강수 확률: %s%%\n"
                    "💧 습도: %s%%"
-                   % (weather['temp_min'], weather['temp_max'], weather['sky'], weather['temp'],
-                      weather['pty'], weather['pop'], weather['reh'])
+                   % (date_ko, weather_data['temp_min'], weather_data['temp_max'], weather_data['sky'],
+                      weather_data['temp'], weather_data['pty'], weather_data['pop'], weather_data['reh'])
                    )
 
-    log.info("[#%s] weather@modules/getData.py: Succeeded to Fetch Weather Data" % req_id)
+    log.info("[#%s] weather@modules/getData.py: Succeeded" % req_id)
 
     return return_data
 
 # 디버그
 if __name__ == "__main__":
+    log.init()
     # print(cal_mass(datetime.datetime(2019, 12, 1), datetime.datetime(2020, 2, 29), True))
-    print(tt(3, 11, 2019, 10, 25, "****DEBUG****", True))
+    # print(tt(3, 11, 2019, 10, 25, "****DEBUG****", True))
+    # print(weather(None, "****DEBUG****", True))

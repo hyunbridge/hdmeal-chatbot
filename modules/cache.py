@@ -15,6 +15,7 @@ import json
 from threading import Thread
 from modules import TTParser, getData
 
+
 # 캐시 비우기
 def purge(req_id, debugging):
     dict_data = OrderedDict()
@@ -23,13 +24,13 @@ def purge(req_id, debugging):
         for file in file_list:
             os.remove("data/cache/" + file)
     except Exception as error:
-        log.err("[#%s] purge@modules/cache.py: Failed to Purge Cache" % req_id)
+        log.err("[#%s] purge@modules/cache.py: Failed" % req_id)
         if debugging:
             dict_data["status"] = error
         dict_data["status"] = "Error"
         return dict_data
     dict_data["status"] = "OK"
-    log.info("[#%s] purge@modules/cache.py: Succeeded to Purge Cache" % req_id)
+    log.info("[#%s] purge@modules/cache.py: Succeeded" % req_id)
     return dict_data
 
 
@@ -71,7 +72,7 @@ def get(req_id, debugging):
                 return_data = "%s\n날씨 캐시 만료까지 %s분 남음" % (return_data, time_left)
             else:
                 return_data = "%s\n날씨 캐시 만료됨" % return_data
-    log.info("[#%s] get@modules/cache.py: Succeeded to Fetch Cache List" % req_id)
+    log.info("[#%s] get@modules/cache.py: Succeeded" % req_id)
     return return_data
 
 
@@ -123,10 +124,10 @@ def health_check(req_id, debugging):
                     time_left = int((datetime.timedelta(hours=1) - (datetime.datetime.now() - timestamp)).seconds / 60)
                     status_weather = "Vaild (Up to %s Min(s))" % time_left
                 else:
-                    getData.weather(req_id, debugging)
+                    getData.weather(None, req_id, debugging)
                     status_weather = "Expired (But Now Created)"
         else:
-            getData.weather(req_id, debugging)
+            getData.weather(None, req_id, debugging)
             status_weather = "NotFound (But Now Created)"
 
     # 쓰레드 정의

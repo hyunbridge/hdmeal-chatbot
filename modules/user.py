@@ -77,7 +77,7 @@ def manage_user(uid, user_grade, user_class, req_id, debugging):
         data[enc_uid] = user_data
         with open(path, "w", encoding="utf-8") as write_file:
             json.dump(data, write_file, ensure_ascii=False, indent="\t")
-            log.info("[#%s] manage_user@modules/user.py: Succeeded to Write File" % req_id)
+            log.info("[#%s] manage_user@modules/user.py: Succeeded" % req_id)
             return return_msg
     except Exception:
         log.err("[#%s] manage_user@modules/user.py: Failed" % req_id)

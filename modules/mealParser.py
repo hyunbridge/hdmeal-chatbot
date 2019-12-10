@@ -125,7 +125,7 @@ def parse(year, month, day, req_id, debugging):
         json.dump(return_data, make_file, ensure_ascii=False, indent="\t")
         print("File Created")
 
-    log.info("[#%s] parse@modules/mealParser.py: Succeeded to Parse Menu(%s-%s-%s)" % (req_id, year, month, day))
+    log.info("[#%s] parse@modules/mealParser.py: Succeeded(%s-%s-%s)" % (req_id, year, month, day))
 
     return 0
 
