@@ -378,12 +378,12 @@ def wtemp(req_id, debugging):
 # 급식봇 브리핑
 def briefing(reqdata, req_id, debugging,):
     log.info("[#%s] briefing@modules/skill.py: New Request" % req_id)
-    global header, hd_err, schdl, weather, meal, tt
-    header = "일시적인 서버 오류로 헤더를 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
-    schdl = "일시적인 서버 오류로 학사일정을 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
-    weather = "일시적인 서버 오류로 날씨를 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
-    meal = "일시적인 서버 오류로 식단을 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
-    tt = "일시적인 서버 오류로 시간표를 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
+    global briefing_header, hd_err, briefing_schdl, briefing_weather, briefing_meal, briefing_tt
+    briefing_header = "일시적인 서버 오류로 헤더를 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
+    briefing_schdl = "일시적인 서버 오류로 학사일정을 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
+    briefing_weather = "일시적인 서버 오류로 날씨를 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
+    briefing_meal = "일시적인 서버 오류로 식단을 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
+    briefing_tt = "일시적인 서버 오류로 시간표를 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
 
     if datetime.datetime.now().time() >= datetime.time(11):  # 11시 이후이면
         # 내일을 기준일로 설정
@@ -411,46 +411,46 @@ def briefing(reqdata, req_id, debugging,):
     # 헤더
     @logging_time
     def f_header():
-        global header, hd_err
+        global briefing_header, hd_err
         if date.weekday() >= 5:  # 주말이면
             log.info("[#%s] briefing@modules/skill.py: Weekend" % req_id)
             hd_err = "%s은 주말 입니다." % date_ko
         else:
-            header = "%s은 %s(%s) 입니다." % (date_ko, date.date().isoformat(), wday(date))
+            briefing_header = "%s은 %s(%s) 입니다." % (date_ko, date.date().isoformat(), wday(date))
             hd_err = None
     # 학사일정
     @logging_time
     def f_cal():
-        global schdl
-        schdl = pstpr(getData.schdl(date.year, date.month, date.day, req_id, debugging))
-        if not schdl:
+        global briefing_schdl
+        briefing_schdl = pstpr(getData.schdl(date.year, date.month, date.day, req_id, debugging))
+        if not briefing_schdl:
             log.info("[#%s] briefing@modules/skill.py: No Schedule" % req_id)
-            schdl = "%s은 학사일정이 없습니다." % date_ko
+            briefing_schdl = "%s은 학사일정이 없습니다." % date_ko
         else:
-            schdl = "%s 학사일정:\n%s" % (date_ko, schdl)
+            briefing_schdl = "%s 학사일정:\n%s" % (date_ko, briefing_schdl)
 
     # 두 번째 말풍선
     # 날씨
     @logging_time
     def f_weather():
-        global weather
-        weather = getData.weather(date_ko, req_id, debugging)
+        global briefing_weather
+        briefing_weather = getData.weather(date_ko, req_id, debugging)
 
     # 세 번째 말풍선
     # 급식
     @logging_time
     def f_meal():
-        global meal
-        meal = meal_core(date.year, date.month, date.day, date.weekday(), req_id, debugging)
-        if "급식을 실시하지 않습니다." in meal:
+        global briefing_meal
+        briefing_meal = meal_core(date.year, date.month, date.day, date.weekday(), req_id, debugging)
+        if "급식을 실시하지 않습니다." in briefing_meal:
             log.info("[#%s] briefing@modules/skill.py: No Meal" % req_id)
-            meal = "%s은 %s" % (date_ko, meal)
-        elif "열량" in meal:
-            meal = "%s 급식:\n%s" % (date_ko, meal[16:].replace('\n\n', '\n'))  # 헤더부분 제거, 줄바꿈 2번 → 1번
+            briefing_meal = "%s은 %s" % (date_ko, briefing_meal)
+        elif "열량" in briefing_meal:
+            briefing_meal = "%s 급식:\n%s" % (date_ko, briefing_meal[16:].replace('\n\n', '\n'))  # 헤더부분 제거, 줄바꿈 2번 → 1번
     # 시간표
     @logging_time
     def f_tt():
-        global tt
+        global briefing_tt
         tt_grade = str()
         tt_class = str()
         try:
@@ -460,14 +460,14 @@ def briefing(reqdata, req_id, debugging,):
             tt_class = user_data[1]
         except Exception:
             log.err("[#%s] briefing@modules/skill.py: Failed to Fetch Timetable" % req_id)
-            tt = "시간표 조회 중 오류가 발생했습니다."
+            briefing_tt = "시간표 조회 중 오류가 발생했습니다."
         if tt_grade is not None or tt_class is not None:  # 사용자 정보 있을 때
-            tt = "%s 시간표:\n%s" % (date_ko,
-                                  getData.tt(tt_grade, tt_class, date.year, date.month, date.day, req_id, debugging)
-                                  .split('):\n\n')[1])  # 헤더부분 제거
+            briefing_tt = "%s 시간표:\n%s" % (date_ko,
+                                           getData.tt(tt_grade, tt_class, date.year, date.month, date.day, req_id, debugging)
+                                           .split('):\n\n')[1])  # 헤더부분 제거
         else:
             log.info("[#%s] briefing@modules/skill.py: Non-Registered User" % req_id)
-            tt = "등록된 사용자만 시간표를 볼 수 있습니다."
+            briefing_tt = "등록된 사용자만 시간표를 볼 수 있습니다."
 
     # 쓰레드 정의
     th_header = Thread(target=f_header)
@@ -496,17 +496,17 @@ def briefing(reqdata, req_id, debugging,):
                 'outputs': [
                     {
                         'simpleText': {
-                            'text': "%s\n\n%s" % (header, schdl)
+                            'text': "%s\n\n%s" % (briefing_header, briefing_schdl)
                         }
                     },
                     {
                         'simpleText': {
-                            'text': weather
+                            'text': briefing_weather
                         }
                     },
                     {
                         'simpleText': {
-                            'text': "%s\n\n%s" % (meal, tt)
+                            'text': "%s\n\n%s" % (briefing_meal, briefing_tt)
                         }
                     }
                 ]
