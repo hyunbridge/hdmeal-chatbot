@@ -10,6 +10,7 @@
 import json
 import sqlite3
 
+
 conn = sqlite3.connect('../data/user/user.db')
 curs = conn.cursor()
 with open('../data/user/user.json', encoding="utf-8") as data_file:

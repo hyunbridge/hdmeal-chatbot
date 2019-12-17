@@ -7,14 +7,15 @@
 # Copyright 2019, Hyungyo Seo
 # modules/TTParser.py - 컴시간 서버에 접속하여 시간표정보를 파싱해오는 스크립트입니다.
 
-import urllib.request
-import urllib.parse as urlparse
-import json
 import ast
-import datetime
 import base64
-from modules import log
+import datetime
+import json
 import os
+import urllib.parse as urlparse
+import urllib.request
+from modules import log
+
 
 # 학교가 속한 지역과 학교의 이름을 정확히 입력
 # 검색 결과가 1개로 특정되도록 해주세요.

@@ -6,26 +6,33 @@
 # ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
 # Copyright 2019, Hyungyo Seo
 
+import argparse
+import datetime
+import random
 from flask import Flask
 from flask_restful import request, Api, Resource
 from modules import getData, skill, FB, log, cache
-import datetime
-import random
 
 # 디버그용
 debugging = False
+test_id = None
 # today에서 사용됨
 today_year = 2019
 today_month = 7
 today_date = 14
 
+
 # 요청코드 생성
 def request_id(original_fn):
     def wrapper_fn(*args, **kwargs):
         global req_id
-        rand = str(random.randint(1, 99999)).zfill(5)  # 5자리 난수 생성
-        tmstm = str(int(datetime.datetime.now().timestamp()))  # 타임스탬프 생성
-        req_id = str(hex(int(rand + tmstm)))[2:].zfill(13)  # 난수 + 타임스탬프 합치고 HEX 변환, 13자리 채우기
+        # Test ID 있으면 Test ID 사용
+        if test_id:
+            req_id = test_id
+        else:
+            rand = str(random.randint(1, 99999)).zfill(5)  # 5자리 난수 생성
+            tmstm = str(int(datetime.datetime.now().timestamp()))  # 타임스탬프 생성
+            req_id = str(hex(int(rand + tmstm)))[2:].zfill(13)  # 난수 + 타임스탬프 합치고 HEX 변환, 13자리 채우기
         return original_fn(*args, **kwargs)
     return wrapper_fn
 
@@ -173,4 +180,10 @@ api.add_resource(Briefing, '/briefing/')
 # 서버 실행
 if __name__ == '__main__':
     debugging = True
+    # 커맨드라인 인자값(Test ID) 받기
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--test-id", help="Test ID")
+    args = parser.parse_args()
+    if "test_id" in args:
+        test_id = str(args.test_id)
     app.run(debug=debugging)

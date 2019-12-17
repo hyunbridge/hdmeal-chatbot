@@ -7,8 +7,8 @@
 # Copyright 2019, Hyungyo Seo
 # modules/user_sqlite.py - 사용자 관리 및 인증을 담당하는 스크립트입니다.
 
-import json
 import hashlib
+import json
 import sqlite3
 from modules import log
 

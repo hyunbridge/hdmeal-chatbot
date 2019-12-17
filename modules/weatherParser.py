@@ -14,6 +14,7 @@ from modules import log
 # 지역코드를 정확히 입력
 region = "4146351500"
 
+
 def parse(req_id, debugging):
 
     log.info("[#%s] parse@modules/weatherParser.py: Started Parsing Weather" % req_id)
