@@ -7,10 +7,11 @@
 # Copyright 2019, Hyungyo Seo
 # modules/WTempParser.py - 실시간수질정보시스템 서버에 접속하여 수온정보를 파싱해오는 스크립트입니다.
 
+import datetime
 import urllib.request
 from bs4 import BeautifulSoup
 from modules import log
-import datetime
+
 
 def get(req_id, debugging):
     log.info("[#%s] get@modules/WTempParser.py: Started Parsing Water Temperature" % req_id)

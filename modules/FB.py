@@ -7,12 +7,13 @@
 # Copyright 2019, Hyungyo Seo
 # modules/FB.py - 페이스북 페이지에 급식정보를 발행하는 스크립트입니다.
 
-from datetime import datetime, timedelta
+import io
 import re
+from datetime import datetime, timedelta
+import facebook
 from PIL import Image, ImageDraw, ImageFont
 from modules import getData, log
-import facebook
-import io
+
 
 def publish(fb_token, req_id, debugging):
 

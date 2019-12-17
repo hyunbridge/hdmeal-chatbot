@@ -7,10 +7,11 @@
 # Copyright 2019, Hyungyo Seo
 # modules/scheduleParser.py - NEIS 서버에 접속하여 급식정보를 파싱해오는 스크립트입니다.
 
+import json
 import urllib.request
 from bs4 import BeautifulSoup
-import json
 from modules import log
+
 
 # 학교코드와 학교종류를 정확히 입력
 school_code = "J100005775"
