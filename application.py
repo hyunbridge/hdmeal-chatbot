@@ -8,6 +8,7 @@
 
 import argparse
 import datetime
+import os
 import random
 from flask import Flask
 from flask_restful import request, Api, Resource
@@ -35,6 +36,11 @@ def request_id(original_fn):
             req_id = str(hex(int(rand + tmstm)))[2:].zfill(13)  # 난수 + 타임스탬프 합치고 HEX 변환, 13자리 채우기
         return original_fn(*args, **kwargs)
     return wrapper_fn
+
+# 환경변수 있는지 확인
+if not os.getenv("DB_SERVER") or not os.getenv("DB_NAME") or not os.getenv("DB_UID") or not os.getenv("DB_PWD"):
+    print("환경변수 설정이 바르게 되어있지 않습니다.")
+    exit(1)
 
 # 로거 초기화
 log.init()
