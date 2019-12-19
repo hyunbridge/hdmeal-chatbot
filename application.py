@@ -7,6 +7,7 @@
 # Copyright 2019, Hyungyo Seo
 
 import argparse
+import ast
 import datetime
 import os
 import random
@@ -23,6 +24,19 @@ today_month = 7
 today_date = 14
 
 
+# 환경변수 있는지 확인
+if (not os.getenv("DB_SERVER") or not os.getenv("DB_NAME") or not os.getenv("DB_UID") or not os.getenv("DB_PWD")
+        or not os.getenv("HDMEAL_TOKENS")):
+    print("환경변수 설정이 바르게 되어있지 않습니다.")
+    exit(1)
+tokens = ast.literal_eval(os.getenv("HDMEAL_TOKENS"))
+if not isinstance(tokens, dict):
+    print("환경변수 설정이 바르게 되어있지 않습니다.")
+    exit(1)
+
+# 로거 초기화
+log.init()
+
 # 요청코드 생성
 def request_id(original_fn):
     def wrapper_fn(*args, **kwargs):
@@ -37,13 +51,26 @@ def request_id(original_fn):
         return original_fn(*args, **kwargs)
     return wrapper_fn
 
-# 환경변수 있는지 확인
-if not os.getenv("DB_SERVER") or not os.getenv("DB_NAME") or not os.getenv("DB_UID") or not os.getenv("DB_PWD"):
-    print("환경변수 설정이 바르게 되어있지 않습니다.")
-    exit(1)
+# 토큰 인증
+# 인증 데코레이터는 반드시 요청코드 데코레이터 밑에 작성
+def auth(original_fn):
+    def wrapper_fn(*args, **kwargs):
+        if test_id:
+            log.info("[#%s] Bypassing Authorization")
+            return original_fn(*args, **kwargs)
+        else:
+            if "HDMeal-Token" in request.headers:
+                if request.headers["HDMeal-Token"] in tokens:
+                    log.info('[#%s] Authorized with Token "%s"' % (req_id, tokens[request.headers["HDMeal-Token"]]))
+                    return original_fn(*args, **kwargs)
+                else:
+                    log.info('[#%s] Failed to Authorize(Token Not Match)' % req_id)
+                    return {'version': '2.0', 'data': {'msg': "미승인 토큰"}}, 403
+            else:
+                log.info('[#%s] Failed to Authorize(No Token)' % req_id)
+                return {'version': '2.0', 'data': {'msg': "인증 토큰 없음"}}, 401
+    return wrapper_fn
 
-# 로거 초기화
-log.init()
 
 # Flask 인스턴스 생성
 app = Flask(__name__)
@@ -54,6 +81,7 @@ log.info("Server Started")
 # 특정 날짜 식단 조회
 class Date(Resource):
     @request_id
+    @auth
     def get(self, year, month, date):
         return getData.meal(year, month, date, req_id, debugging)
 
@@ -61,6 +89,7 @@ class Date(Resource):
 class Meal(Resource):
     @staticmethod
     @request_id
+    @auth
     def post():
         return skill.meal(request.data, req_id, debugging)
 
@@ -68,6 +97,7 @@ class Meal(Resource):
 class MealSpecificDate(Resource):
     @staticmethod
     @request_id
+    @auth
     def post():
         return skill.meal_specific_date(request.data, req_id, debugging)
 
@@ -76,6 +106,7 @@ class MealSpecificDate(Resource):
 class TimetableRegistered(Resource):
     @staticmethod
     @request_id
+    @auth
     def post():
         return skill.tt_registered(request.data, req_id, debugging)
 
@@ -83,6 +114,7 @@ class TimetableRegistered(Resource):
 class Timetable(Resource):
     @staticmethod
     @request_id
+    @auth
     def post():
         return skill.tt(request.data, req_id, debugging)
 
@@ -91,6 +123,7 @@ class Timetable(Resource):
 class PurgeCache(Resource):
     @staticmethod
     @request_id
+    @auth
     def post():
         return skill.purge_cache(request.data, req_id, debugging)
 
@@ -98,6 +131,7 @@ class PurgeCache(Resource):
 class ListCache(Resource):
     @staticmethod
     @request_id
+    @auth
     def post():
         return skill.get_cache(request.data, req_id, debugging)
 
@@ -105,6 +139,7 @@ class ListCache(Resource):
 class CacheHealthCheck(Resource):
     @staticmethod
     @request_id
+    @auth
     def get():
         return cache.health_check(req_id, debugging)
 
@@ -112,6 +147,7 @@ class CacheHealthCheck(Resource):
 class CacheHealthCheckSkill(Resource):
     @staticmethod
     @request_id
+    @auth
     def post():
         return skill.check_cache(request.data, req_id, debugging)
 
@@ -120,6 +156,7 @@ class CacheHealthCheckSkill(Resource):
 class ManageUser(Resource):
     @staticmethod
     @request_id
+    @auth
     def post():
         return skill.manage_user(request.data, req_id, debugging)
 
@@ -127,6 +164,7 @@ class ManageUser(Resource):
 class DeleteUser(Resource):
     @staticmethod
     @request_id
+    @auth
     def post():
         return skill.delete_user(request.data, req_id, debugging)
 
@@ -135,6 +173,7 @@ class DeleteUser(Resource):
 class WTemp(Resource):
     @staticmethod
     @request_id
+    @auth
     def post():
         return skill.wtemp(req_id, debugging)
 
@@ -143,6 +182,7 @@ class WTemp(Resource):
 class Cal(Resource):
     @staticmethod
     @request_id
+    @auth
     def post():
         return skill.schdl(request.data, req_id, debugging)
 
@@ -151,17 +191,19 @@ class Cal(Resource):
 class Facebook(Resource):
     @staticmethod
     @request_id
+    @auth
     def post():
         if "X-FB-Token" in request.headers:
             return FB.publish(request.headers["X-FB-Token"], req_id, debugging)
         else:
-            return FB.publish('', req_id, debugging)
+            return FB.publish(None, req_id, debugging)
 
 
 # 급식봇 브리핑
 class Briefing(Resource):
     @staticmethod
     @request_id
+    @auth
     def post():
         return skill.briefing(request.data, req_id, debugging)
 
@@ -191,5 +233,5 @@ if __name__ == '__main__':
     parser.add_argument("--test-id", help="Test ID")
     args = parser.parse_args()
     if "test_id" in args:
-        test_id = str(args.test_id)
+        test_id = args.test_id
     app.run(debug=debugging)

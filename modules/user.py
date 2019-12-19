@@ -13,11 +13,11 @@ import pyodbc
 from modules import log
 
 dbconf = ('DRIVER={ODBC Driver 17 for SQL Server};SERVER=%s;DATABASE=%s;UID=%s;PWD=%s'
-                      % (os.getenv("DB_SERVER"), os.getenv("DB_NAME"), os.getenv("DB_UID"), os.getenv("DB_PWD")))
+          % (os.getenv("DB_SERVER"), os.getenv("DB_NAME"), os.getenv("DB_UID"), os.getenv("DB_PWD")))
+
 
 # 사용자 정보 읽기
 def get_user(uid, req_id):
-
     log.info("[#%s] get_user@modules/user.py: Started Fetching User Info" % req_id)
 
     # UID 암호화
@@ -46,7 +46,6 @@ def get_user(uid, req_id):
 
 # 사용자 생성 및 수정
 def manage_user(uid, user_grade, user_class, req_id):
-
     user_grade = int(user_grade)
     user_class = int(user_class)
 
@@ -80,7 +79,6 @@ def manage_user(uid, user_grade, user_class, req_id):
 
 # 사용자 삭제
 def delete_user(uid, req_id):
-
     log.info("[#%s] delete_user@modules/user.py: Started Deleting User Info" % req_id)
 
     # UID 암호화
