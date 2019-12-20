@@ -10,6 +10,7 @@
 import datetime
 import json
 import os
+import urllib.request
 from collections import OrderedDict
 from modules import mealParser, scheduleParser, WTempParser, TTParser, weatherParser, log
 
@@ -240,6 +241,7 @@ def wtemp(req_id, debugging):
 
     return body
 
+
 # 날씨 가져오기
 def weather(date_ko, req_id, debugging):
     global weather_data
@@ -302,9 +304,42 @@ def weather(date_ko, req_id, debugging):
 
     return return_data
 
+
+# 커밋 가져오기
+def commits(req_id, debugging):
+    # GitHub API 사용
+    # API 사양은 https://developer.github.com/v3/repos/commits/#list-commits-on-a-repository 참조
+    try:
+        response = (
+            urllib.request.urlopen(url="https://api.github.com/repos/hgyoseo/hdmeal/commits").read().decode('utf-8')
+        )
+        data = json.loads(response)
+    except Exception as error:
+        if debugging:
+            print(error)
+        log.err("[#%s] commits@modules/getData.py: Failed to Parse Commits" % req_id)
+        return error
+
+    # 마지막 커밋이 일어난 시간를 파싱함
+    # 시간은 UTC 기준, datetime에서 인식할 수 있게 하기 위해 Z를 떼고 9시간을 더해 한국 표준시로 변환
+    updated_at_datetime = (datetime.datetime.fromisoformat(data[0]["commit"]["committer"]["date"].replace("Z", ""))
+                           + datetime.timedelta(hours=9))
+    updated_at = "%s년 %s월 %s일 %s시 %s분" % (
+        updated_at_datetime.year, updated_at_datetime.month, updated_at_datetime.day,
+        updated_at_datetime.hour, updated_at_datetime.minute
+    )
+    # 최근 5개 커밋의 메시지 가져오기
+    messages = list(map(lambda loc: data[loc]["commit"]["message"], range(5)))
+    # 리스트의 0번에 마지막 커밋 시간 삽입
+    messages.insert(0, updated_at)
+    log.info("[#%s] commits@modules/getData.py: Succeeded" % req_id)
+    return messages
+
+
 # 디버그
 if __name__ == "__main__":
     log.init()
     # print(cal_mass(datetime.datetime(2019, 12, 1), datetime.datetime(2020, 2, 29), True))
     # print(tt(3, 11, 2019, 10, 25, "****DEBUG****", True))
     # print(weather(None, "****DEBUG****", True))
+    print(commits("****DEBUG****", True))
