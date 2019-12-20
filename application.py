@@ -208,6 +208,15 @@ class Briefing(Resource):
         return skill.briefing(request.data, req_id, debugging)
 
 
+# Repo 커밋 조회
+class Commits(Resource):
+    @staticmethod
+    @request_id
+    @auth
+    def post():
+        return skill.commits(req_id, debugging)
+
+
 # URL Router에 맵핑.(Rest URL정의)
 api.add_resource(Date, '/date/<int:year>-<int:month>-<int:date>')
 api.add_resource(Meal, '/meal/')
@@ -224,6 +233,7 @@ api.add_resource(WTemp, '/wtemp/')
 api.add_resource(Cal, '/cal/')
 api.add_resource(Facebook, '/fb/')
 api.add_resource(Briefing, '/briefing/')
+api.add_resource(Commits, '/commits/')
 
 # 서버 실행
 if __name__ == '__main__':

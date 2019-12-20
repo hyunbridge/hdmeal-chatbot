@@ -21,6 +21,8 @@ def skill(msg):
                 'msg': msg
             }
             }
+
+
 def skill_simpletext(msg):
     return {'version': '2.0',
             'template': {
@@ -34,10 +36,12 @@ def skill_simpletext(msg):
             }
             }
 
+
 # 일정 후처리(잡정보들 삭제)
 def pstpr(cal):
     return cal.replace("일정이 없습니다.", "").replace("토요휴업일", "").replace("여름방학", "") \
         .replace("겨울방학", "").strip()
+
 
 # 요일 처리
 def wday(date):
@@ -55,6 +59,7 @@ def wday(date):
         return "토"
     else:
         return "일"
+
 
 # 식단조회 코어
 def meal_core(year, month, date, wday, req_id, debugging):
@@ -293,6 +298,7 @@ def purge_cache(reqdata, req_id, debugging):
         msg = "사용자 인증에 실패하였습니다.\n당신의 UID는 %s 입니다." % uid
     return skill(msg)
 
+
 # 캐시 상태확인
 def check_cache(reqdata, req_id, debugging):
     log.info("[#%s] check_cache@modules/skill.py: New Request" % req_id)
@@ -376,7 +382,7 @@ def wtemp(req_id, debugging):
 
 
 # 급식봇 브리핑
-def briefing(reqdata, req_id, debugging,):
+def briefing(reqdata, req_id, debugging, ):
     log.info("[#%s] briefing@modules/skill.py: New Request" % req_id)
     global briefing_header, hd_err, briefing_schdl, briefing_weather, briefing_meal, briefing_tt
     briefing_header = "일시적인 서버 오류로 헤더를 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
@@ -405,6 +411,7 @@ def briefing(reqdata, req_id, debugging,):
                 end_time = time.time()
                 print("{} 종료. 실행시간: {} 초".format(original_fn.__name__, end_time - start_time))
             return result
+
         return wrapper_fn
 
     # 첫 번째 말풍선
@@ -418,6 +425,7 @@ def briefing(reqdata, req_id, debugging,):
         else:
             briefing_header = "%s은 %s(%s) 입니다." % (date_ko, date.date().isoformat(), wday(date))
             hd_err = None
+
     # 학사일정
     @logging_time
     def f_cal():
@@ -447,6 +455,7 @@ def briefing(reqdata, req_id, debugging,):
             briefing_meal = "%s은 %s" % (date_ko, briefing_meal)
         elif "열량" in briefing_meal:
             briefing_meal = "%s 급식:\n%s" % (date_ko, briefing_meal[16:].replace('\n\n', '\n'))  # 헤더부분 제거, 줄바꿈 2번 → 1번
+
     # 시간표
     @logging_time
     def f_tt():
@@ -463,7 +472,8 @@ def briefing(reqdata, req_id, debugging,):
             briefing_tt = "시간표 조회 중 오류가 발생했습니다."
         if tt_grade is not None or tt_class is not None:  # 사용자 정보 있을 때
             briefing_tt = "%s 시간표:\n%s" % (date_ko,
-                                           getData.tt(tt_grade, tt_class, date.year, date.month, date.day, req_id, debugging)
+                                           getData.tt(tt_grade, tt_class, date.year, date.month, date.day, req_id,
+                                                      debugging)
                                            .split('):\n\n')[1])  # 헤더부분 제거
         else:
             log.info("[#%s] briefing@modules/skill.py: Non-Registered User" % req_id)
@@ -512,6 +522,17 @@ def briefing(reqdata, req_id, debugging,):
                 ]
             }
             }
+
+
+# 커밋 가져오기
+def commits(req_id, debugging):
+    commit_list = getData.commits(req_id, debugging)
+    commits_msg = ("급식봇의 기능 개선과 속도 향상, 버그 수정을 위해 노력하고 있습니다.\n"
+                   "마지막 서버 업데이트는 %s에 있었습니다.\n"
+                   "흥덕중 급식봇의 최근 변경 내역입니다:\n"
+                   "%s\n%s\n%s\n%s\n%s" % (
+                   commit_list[0], commit_list[1], commit_list[2], commit_list[3], commit_list[4], commit_list[5]))
+    return skill(commits_msg)
 
 
 # 디버그
