@@ -576,7 +576,10 @@ def lol(reqdata, req_id, debugging):
         log.err("[#%s] lol@modules/skill.py: Error while Parsing Summoner Data" % req_id)
         return skill_simpletext("오류가 발생했습니다.\n요청 ID: " + req_id)
 
-    if summoner_data:
+    if summoner_data == 'Invalid Token':
+        log.err("[#%s] lol@modules/skill.py: Invalid Token" % req_id)
+        return skill_simpletext("오류가 발생했습니다.\n요청 ID: " + req_id)
+    elif summoner_data:
         # 솔랭 전적 구하기
         if summoner_data["ranked_solo"]:
             solo = ("솔랭 전적:\n"

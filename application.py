@@ -66,8 +66,6 @@ def auth(original_fn):
                 else:
                     log.info('[#%s] Failed to Authorize(Token Not Match)' % req_id)
                     return {'version': '2.0', 'data': {'msg': "미승인 토큰"}}, 403
-            elif debugging:
-                return original_fn(*args, **kwargs)
             else:
                 log.info('[#%s] Failed to Authorize(No Token)' % req_id)
                 return {'version': '2.0', 'data': {'msg': "인증 토큰 없음"}}, 401
