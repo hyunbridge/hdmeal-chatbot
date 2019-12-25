@@ -26,7 +26,7 @@ today_date = 14
 
 # 환경변수 있는지 확인
 if (not os.getenv("DB_SERVER") or not os.getenv("DB_NAME") or not os.getenv("DB_UID") or not os.getenv("DB_PWD")
-        or not os.getenv("HDMEAL_TOKENS")):
+        or not os.getenv("HDMEAL_TOKENS") or not os.getenv("RIOT_TOKEN")):
     print("환경변수 설정이 바르게 되어있지 않습니다.")
     exit(1)
 tokens = ast.literal_eval(os.getenv("HDMEAL_TOKENS"))
@@ -66,6 +66,8 @@ def auth(original_fn):
                 else:
                     log.info('[#%s] Failed to Authorize(Token Not Match)' % req_id)
                     return {'version': '2.0', 'data': {'msg': "미승인 토큰"}}, 403
+            elif debugging:
+                return original_fn(*args, **kwargs)
             else:
                 log.info('[#%s] Failed to Authorize(No Token)' % req_id)
                 return {'version': '2.0', 'data': {'msg': "인증 토큰 없음"}}, 401
@@ -216,6 +218,14 @@ class Commits(Resource):
     def post():
         return skill.commits(req_id, debugging)
 
+# 롤 전적조회
+class LoL(Resource):
+    @staticmethod
+    @request_id
+    @auth
+    def post():
+        return skill.lol(request.data, req_id, debugging)
+
 
 # URL Router에 맵핑.(Rest URL정의)
 api.add_resource(Date, '/date/<int:year>-<int:month>-<int:date>')
@@ -234,10 +244,11 @@ api.add_resource(Cal, '/cal/')
 api.add_resource(Facebook, '/fb/')
 api.add_resource(Briefing, '/briefing/')
 api.add_resource(Commits, '/commits/')
+api.add_resource(LoL, '/lol/')
 
 # 서버 실행
 if __name__ == '__main__':
-    debugging = True
+    debugging = False
     # 커맨드라인 인자값(Test ID) 받기
     parser = argparse.ArgumentParser()
     parser.add_argument("--test-id", help="Test ID")
