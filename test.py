@@ -315,6 +315,30 @@ class Tests(unittest.TestCase):
         self.assertEqual("OK" == response_data["Parser"], True, "파서 오류 발생")
         self.assertEqual("OK" == response_data["IMG"], True, "이미지 생성 중 오류 발생")
 
+    # 커밋 기록 조회
+    def test_commits(self):
+        request = requests.post(base_url + "commits/")
+        response_data = request.json()["data"]["msg"]
+
+        self.assertEqual(request.status_code, 200, "비 정상 응답")
+
+    # 롤 전적 조회
+    def test_lol(self):
+        request_data = (
+            {
+                "action": {
+                    "params": {
+                        "summonerName": "미국거주희선아빠"
+                    }
+                }
+            }
+        )
+        request = requests.post(base_url + "lol/", data=json.dumps(request_data))
+        response_data = request.json()["template"]["outputs"][0]
+
+        self.assertEqual(request.status_code, 200, "비 정상 응답")
+        self.assertEqual("basicCard" in response_data, True, "서버 오류 발생")
+
 
 if __name__ == '__main__':
     unittest.main()

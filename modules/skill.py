@@ -11,7 +11,7 @@ import datetime
 import json
 import time
 from threading import Thread
-from modules import getData, cache, user, log
+from modules import getData, cache, user, log, LoL
 
 
 # Skill 응답용 JSON 생성
@@ -526,15 +526,154 @@ def briefing(reqdata, req_id, debugging, ):
 
 # 커밋 가져오기
 def commits(req_id, debugging):
+    log.info("[#%s] commits@modules/skill.py: New Request" % req_id)
     commit_list = getData.commits(req_id, debugging)
     commits_msg = ("급식봇의 기능 개선과 속도 향상, 버그 수정을 위해 노력하고 있습니다.\n"
                    "마지막 서버 업데이트는 %s에 있었습니다.\n"
                    "흥덕중 급식봇의 최근 변경 내역입니다:\n"
                    "%s\n%s\n%s\n%s\n%s" % (
-                   commit_list[0], commit_list[1], commit_list[2], commit_list[3], commit_list[4], commit_list[5]))
+                       commit_list[0], commit_list[1], commit_list[2], commit_list[3], commit_list[4], commit_list[5]))
+    log.info("[#%s] commits@modules/skill.py: Started" % req_id)
     return skill(commits_msg)
+
+
+def lol(reqdata, req_id, debugging):
+    log.info("[#%s] lol@modules/skill.py: New Request" % req_id)
+    try:
+        summoner_name = json.loads(reqdata)["action"]["params"]["summonerName"]
+    except Exception:
+        log.err("[#%s] lol@modules/skill.py: Error while Parsing Summoner Name" % req_id)
+        return skill("오류가 발생했습니다.\n요청 ID: " + req_id)
+
+    # 소환사명 16자 초과하면
+    if len(summoner_name) > 16:
+        log.info("[#%s] lol@modules/skill.py: Summoner Name is Too Long" % req_id)
+        return {'version': '2.0',
+                'template': {
+                    'outputs': [
+                        {
+                            "basicCard": {
+                                "title": "소환사명이 너무 김",
+                                "description": "소환사명이 너무 깁니다.\n"
+                                               "소환사명은 영문 16자, 한글 8자 이내입니다.\n"
+                                               "잘못 입력하진 않았는지 확인해주세요.",
+                                "buttons": [
+                                    {
+                                        "action": "message",
+                                        "label": "다시 검색하기",
+                                        "messageText": "롤 전적 조회하기"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+                }
+
+    try:
+        summoner_data = LoL.parse(summoner_name, req_id, debugging)
+    except Exception:
+        log.err("[#%s] lol@modules/skill.py: Error while Parsing Summoner Data" % req_id)
+        return skill_simpletext("오류가 발생했습니다.\n요청 ID: " + req_id)
+
+    if summoner_data:
+        # 솔랭 전적 구하기
+        if summoner_data["ranked_solo"]:
+            solo = ("솔랭 전적:\n"
+                    "%s %s (%s LP)\n"
+                    "%s승 %s패 (%s%%)\n\n" %
+                    (summoner_data["ranked_solo"]["tier"], summoner_data["ranked_solo"]["rank"],
+                     summoner_data["ranked_solo"]["leaguePoints"],
+                     summoner_data["ranked_solo"]["wins"],
+                     summoner_data["ranked_solo"]["losses"],
+                     summoner_data["ranked_solo"]["winningRate"]))
+        else:
+            solo = "솔랭 전적이 없습니다. 분발하세요!\n\n"
+
+        # 자유랭 전적 구하기
+        if summoner_data["ranked_flex"]:
+            flex = ("자유랭 전적:\n"
+                    "%s %s (%s LP)\n"
+                    "%s승 %s패 (%s%%)\n\n" %
+                    (summoner_data["ranked_flex"]["tier"], summoner_data["ranked_flex"]["rank"],
+                     summoner_data["ranked_flex"]["leaguePoints"],
+                     summoner_data["ranked_flex"]["wins"],
+                     summoner_data["ranked_flex"]["losses"],
+                     summoner_data["ranked_flex"]["winningRate"]))
+        else:
+            flex = "자유랭 전적이 없습니다. 분발하세요!\n\n"
+
+        # 통계 내기
+        if summoner_data["games"]:
+            if summoner_data["preferredLane"]:
+                preferred_lane = "%s(%s%%)" % (summoner_data["preferredLane"][0], summoner_data["preferredLane"][1])
+            else:
+                preferred_lane = "정보없음"
+            if summoner_data["preferredChampion"]:
+                preferred_champion = ("%s(%s%%)" %
+                                      (summoner_data["preferredChampion"][0], summoner_data["preferredChampion"][1]))
+            else:
+                preferred_champion = "정보없음"
+            preferences = ("최근 %s번의 매치를 바탕으로 분석한 결과입니다:\n"
+                           "많이한 라인: %s\n"
+                           "많이한 챔피언: %s") % (summoner_data["games"], preferred_lane, preferred_champion)
+        else:
+            preferences = "통계가 없습니다. 분발하세요!"
+
+        return {'version': '2.0',
+                'template': {
+                    'outputs': [
+                        {
+                            "basicCard": {
+                                "title": "%s (레벨 %s)"
+                                         % (summoner_data["summoner"]["name"], summoner_data["summoner"]["level"]),
+                                "description": solo + flex + preferences,
+                                "thumbnail": {
+                                    "imageUrl": summoner_data["summoner"]["profileIcon"]
+                                },
+                                "buttons": [
+                                    {
+                                        "action": "webLink",
+                                        "label": "OP.GG에서 보기",
+                                        "webLinkUrl": summoner_data["summoner"]["OPGG"]
+                                    },
+                                    {
+                                        "action": "message",
+                                        "label": "다른 소환사 검색하기",
+                                        "messageText": "롤 전적 조회하기"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+                }
+    else:
+        return {'version': '2.0',
+                'template': {
+                    'outputs': [
+                        {
+                            "basicCard": {
+                                "title": "소환사를 찾을 수 없음",
+                                "description": summoner_name + " 소환사를 찾을 수 없습니다.\n"
+                                                               "한국 서버에 등록된 소환사가 맞는지, "
+                                                               "잘못 입력하진 않았는지 확인해주세요.",
+                                "buttons": [
+                                    {
+                                        "action": "message",
+                                        "label": "다시 검색하기",
+                                        "messageText": "롤 전적 조회하기"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+                }
 
 
 # 디버그
 if __name__ == "__main__":
-    print(skill("msg"))
+    log.init()
+    # print(skill("msg"))
+    print(lol(None, "****DEBUG****", True))
