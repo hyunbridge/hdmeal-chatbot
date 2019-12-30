@@ -138,7 +138,7 @@ def tt_registered(reqdata, req_id, debugging):
     except Exception:
         log.err("[#%s] tt_registered@modules/skill.py: Error while Parsing Request" % req_id)
         return skill("오류가 발생했습니다.\n요청 ID: " + req_id)
-    if tt_grade is not None or tt_class is not None:  # 사용자 정보 있을 때
+    if tt_grade and tt_class:  # 사용자 정보 있을 때
         try:
             sys_date = json.loads(json.loads(reqdata)["action"]["params"]["sys_date"])["date"]  # 날짜 파싱
         except Exception:
