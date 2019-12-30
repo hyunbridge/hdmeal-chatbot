@@ -190,22 +190,27 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
             else:
                 return_data.append("%s(%s)" % (subject, teacher))
 
-    # 단축수업, 연장수업 표시
-    tt_num, og_tt_num = 0, 0
-    for i in range(1, 9):  # 교시수 구하기
-        if not tt[comci_weekday][i] and not tt_num:
-            tt_num = i - 1
-        if not og_tt[comci_weekday][i] and not og_tt_num:
-            og_tt_num = i - 1
-    if tt_num == og_tt_num:
-        pass
-    elif tt_num < og_tt_num:
-        return_data.append("[MSG]⭐단축수업이 있습니다. (%s교시 → %s교시)" % (og_tt_num, tt_num))
-    elif tt_num > og_tt_num:
-        return_data.append("[MSG]⭐연장수업이 있습니다. (%s교시 → %s교시)" % (og_tt_num, tt_num))
+    # 리스트에서 0 제거
+    tt[comci_weekday] = [i for i in tt[comci_weekday] if i != 0]
+    og_tt[comci_weekday] = [i for i in og_tt[comci_weekday] if i != 0]
 
-    log.info("[#%s] parse@modules/TTParser.py: Succeeded(%s-%s, %s)" % (
-        req_id, tt_grade, tt_class, tt_date))
+    # 단축수업, 연장수업, 시간표없음 표시
+    if tt[comci_weekday] and og_tt[comci_weekday]:
+        # 교시수 구하기
+        tt_num = len(tt[comci_weekday])
+        og_tt_num = len(og_tt[comci_weekday])
+
+        if tt_num == og_tt_num:
+            pass
+        elif tt_num < og_tt_num:
+            return_data.append("[MSG]⭐단축수업이 있습니다. (%s교시 → %s교시)" % (og_tt_num, tt_num))
+        elif tt_num > og_tt_num:
+            return_data.append("[MSG]⭐연장수업이 있습니다. (%s교시 → %s교시)" % (og_tt_num, tt_num))
+
+        log.info("[#%s] parse@modules/TTParser.py: Succeeded(%s-%s, %s)" % (
+            req_id, tt_grade, tt_class, tt_date))
+    else:
+        return_data.append("[MSG]⭐수업을 실시하지 않습니다. (시간표 없음)")
 
     return return_data
 
