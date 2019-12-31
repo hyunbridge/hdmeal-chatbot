@@ -132,7 +132,7 @@ def tt_registered(reqdata, req_id, debugging):
     log.info("[#%s] tt_registered@modules/skill.py: New Request" % req_id)
     try:
         uid = json.loads(reqdata)["userRequest"]["user"]["id"]
-        user_data = user.get_user(uid, req_id)  # 사용자 정보 불러오기
+        user_data = user.get_user(uid, req_id, debugging)  # 사용자 정보 불러오기
         tt_grade = user_data[0]
         tt_class = user_data[1]
     except Exception:
@@ -270,7 +270,7 @@ def get_cache(reqdata, req_id, debugging):
     log.info("[#%s] get_cache@modules/skill.py: New Request" % req_id)
     # 사용자 ID 가져오고 검증
     uid = json.loads(reqdata)["userRequest"]["user"]["id"]
-    if user.auth_admin(uid, req_id):
+    if user.auth_admin(uid, req_id, debugging):
         cache_list = cache.get(req_id, debugging)
         if cache_list == "":
             log.info("[#%s] get_cache@modules/skill.py: No Cache" % req_id)
@@ -287,7 +287,7 @@ def purge_cache(reqdata, req_id, debugging):
     log.info("[#%s] purge_cache@modules/skill.py: New Request" % req_id)
     # 사용자 ID 가져오고 검증
     uid = json.loads(reqdata)["userRequest"]["user"]["id"]
-    if user.auth_admin(uid, req_id):
+    if user.auth_admin(uid, req_id, debugging):
         if cache.purge(req_id, debugging)["status"] == "OK":  # 삭제 실행, 결과 검증
             msg = "캐시를 비웠습니다."
         else:
@@ -304,7 +304,7 @@ def check_cache(reqdata, req_id, debugging):
     log.info("[#%s] check_cache@modules/skill.py: New Request" % req_id)
     # 사용자 ID 가져오고 검증
     uid = json.loads(reqdata)["userRequest"]["user"]["id"]
-    if user.auth_admin(uid, req_id):
+    if user.auth_admin(uid, req_id, debugging):
         health = cache.health_check(req_id, debugging)
         msg = "시간표: %s\n한강 수온: %s\n날씨: %s" % (
             health["Timetable"], health["HanRiverTemperature"], health["Weather"])
@@ -336,7 +336,7 @@ def manage_user(reqdata, req_id, debugging):
         print(user_grade)
         print(user_class)
         print(uid)
-    req = user.manage_user(uid, user_grade, user_class, req_id)
+    req = user.manage_user(uid, user_grade, user_class, req_id, debugging)
     if req == "Registered":
         log.info("[#%s] manage_user@modules/skill.py: Created" % req_id)
         msg = "등록에 성공했습니다."
@@ -362,7 +362,7 @@ def delete_user(reqdata, req_id, debugging):
         return skill("오류가 발생했습니다.\n요청 ID: " + req_id)
     if debugging:
         print(uid)
-    req = user.delete_user(uid, req_id)
+    req = user.delete_user(uid, req_id, debugging)
     if req == "NotExist":
         log.info("[#%s] delete_user@modules/skill.py: User does Not Exist" % req_id)
         msg = "존재하지 않는 사용자입니다."
@@ -464,7 +464,7 @@ def briefing(reqdata, req_id, debugging, ):
         tt_class = str()
         try:
             uid = json.loads(reqdata)["userRequest"]["user"]["id"]
-            user_data = user.get_user(uid, req_id)  # 사용자 정보 불러오기
+            user_data = user.get_user(uid, req_id, debugging)  # 사용자 정보 불러오기
             tt_grade = user_data[0]
             tt_class = user_data[1]
         except Exception:

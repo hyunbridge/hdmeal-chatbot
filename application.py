@@ -23,10 +23,13 @@ today_year = 2019
 today_month = 7
 today_date = 14
 
-
 # 환경변수 있는지 확인
-if (not os.getenv("DB_SERVER") or not os.getenv("DB_NAME") or not os.getenv("DB_UID") or not os.getenv("DB_PWD")
-        or not os.getenv("HDMEAL_TOKENS") or not os.getenv("RIOT_TOKEN")):
+# DEPRECATED #
+# if (not os.getenv("DB_SERVER") or not os.getenv("DB_NAME") or not os.getenv("DB_UID") or not os.getenv("DB_PWD")
+#        or not os.getenv("HDMEAL_TOKENS") or not os.getenv("RIOT_TOKEN")):
+#    print("환경변수 설정이 바르게 되어있지 않습니다.")
+#    exit(1)
+if not os.getenv("HDMEAL_TOKENS") or not os.getenv("RIOT_TOKEN"):
     print("환경변수 설정이 바르게 되어있지 않습니다.")
     exit(1)
 tokens = ast.literal_eval(os.getenv("HDMEAL_TOKENS"))
@@ -36,6 +39,7 @@ if not isinstance(tokens, dict):
 
 # 로거 초기화
 log.init()
+
 
 # 요청코드 생성
 def request_id(original_fn):
@@ -49,7 +53,9 @@ def request_id(original_fn):
             tmstm = str(int(datetime.datetime.now().timestamp()))  # 타임스탬프 생성
             req_id = str(hex(int(rand + tmstm)))[2:].zfill(13)  # 난수 + 타임스탬프 합치고 HEX 변환, 13자리 채우기
         return original_fn(*args, **kwargs)
+
     return wrapper_fn
+
 
 # 토큰 인증
 # 인증 데코레이터는 반드시 요청코드 데코레이터 밑에 작성
@@ -69,6 +75,7 @@ def auth(original_fn):
             else:
                 log.info('[#%s] Failed to Authorize(No Token)' % req_id)
                 return {'version': '2.0', 'data': {'msg': "인증 토큰 없음"}}, 401
+
     return wrapper_fn
 
 
@@ -78,12 +85,14 @@ api = Api(app)
 
 log.info("Server Started")
 
+
 # 특정 날짜 식단 조회
 class Date(Resource):
     @request_id
     @auth
     def get(self, year, month, date):
         return getData.meal(year, month, date, req_id, debugging)
+
 
 # Skill 식단 조회
 class Meal(Resource):
@@ -92,6 +101,7 @@ class Meal(Resource):
     @auth
     def post():
         return skill.meal(request.data, req_id, debugging)
+
 
 # Skill 특정날짜(고정값) 식단 조회
 class MealSpecificDate(Resource):
@@ -110,6 +120,7 @@ class TimetableRegistered(Resource):
     def post():
         return skill.tt_registered(request.data, req_id, debugging)
 
+
 # Skill 시간표 조회 (미등록 사용자용)
 class Timetable(Resource):
     @staticmethod
@@ -127,6 +138,7 @@ class PurgeCache(Resource):
     def post():
         return skill.purge_cache(request.data, req_id, debugging)
 
+
 # 캐시 목록 보여주기
 class ListCache(Resource):
     @staticmethod
@@ -135,6 +147,7 @@ class ListCache(Resource):
     def post():
         return skill.get_cache(request.data, req_id, debugging)
 
+
 # 캐시 상태확인
 class CacheHealthCheck(Resource):
     @staticmethod
@@ -142,6 +155,7 @@ class CacheHealthCheck(Resource):
     @auth
     def get():
         return cache.health_check(req_id, debugging)
+
 
 # 캐시 상태확인(Skill)
 class CacheHealthCheckSkill(Resource):
@@ -159,6 +173,7 @@ class ManageUser(Resource):
     @auth
     def post():
         return skill.manage_user(request.data, req_id, debugging)
+
 
 # 사용자 삭제
 class DeleteUser(Resource):
@@ -215,6 +230,7 @@ class Commits(Resource):
     @auth
     def post():
         return skill.commits(req_id, debugging)
+
 
 # 롤 전적조회
 class LoL(Resource):
