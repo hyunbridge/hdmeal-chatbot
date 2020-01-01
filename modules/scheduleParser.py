@@ -51,7 +51,7 @@ def parse(year, month, req_id, debugging):
 
     # 일정 후처리(잡정보들 삭제)
     def pstpr(cal):
-        return cal.replace("일정이 없습니다.", "").replace("토요휴업일", "").strip().replace('\n\n\n', '\n')
+        return cal.replace("토요휴업일", "").strip().replace('\n\n\n', '\n')
 
     for i in range(len(data)):
         string = data[i].get_text().strip()
