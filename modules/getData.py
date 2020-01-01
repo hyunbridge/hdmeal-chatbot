@@ -164,11 +164,7 @@ def schdl_mass(start, end, req_id, debugging):
             continue  # 이후 구문 실행 않음
 
         if str(i[2]) in data:  # 일정이 있는지 확인
-            body = data[str(i[2])]
-        else:  # 없으면
-            body = "일정이 없습니다."
-
-        schdl.append((i[0], i[1], i[2], body))  # 년, 월, 일, 일정
+            schdl.append((i[0], i[1], i[2], data[str(i[2])]))  # 년, 월, 일, 일정
 
     log.info("[#%s] schdl_mass@modules/getData.py: Succeeded(%s ~ %s)" % (req_id, start.date(), end.date()))
 
