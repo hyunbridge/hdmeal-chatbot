@@ -12,6 +12,7 @@ import json
 import time
 from threading import Thread
 from modules import getData, cache, user, log, LoL
+from itertools import groupby
 
 
 # Skill 응답용 JSON 생성
@@ -35,12 +36,6 @@ def skill_simpletext(msg):
                 ]
             }
             }
-
-
-# 일정 후처리(잡정보들 삭제)
-def pstpr(cal):
-    return cal.replace("일정이 없습니다.", "").replace("토요휴업일", "").replace("여름방학", "") \
-        .replace("겨울방학", "").strip()
 
 
 # 요일 처리
@@ -207,11 +202,12 @@ def schdl(reqdata, req_id, debugging):
             log.err("[#%s] cal@modules/skill.py: Error while Parsing Date" % req_id)
             return skill("오류가 발생했습니다.\n요청 ID: " + req_id)
 
-        cal = getData.schdl(date.year, date.month, date.day, req_id, debugging)
+        prsnt_schdl = getData.schdl(date.year, date.month, date.day, req_id, debugging)
 
-        cal = pstpr(cal)
-        if cal:
-            msg = "%s-%s-%s(%s):\n%s" % (date.year, date.month, date.day, wday(date), cal)  # YYYY-MM-DD(Weekday)
+        prsnt_schdl = prsnt_schdl
+        if prsnt_schdl:
+            msg = "%s-%s-%s(%s):\n%s" % (str(date.year).zfill(4), str(date.month).zfill(2), str(date.day).zfill(2),
+                                         wday(date), prsnt_schdl)  # YYYY-MM-DD(Weekday)
         else:
             msg = "일정이 없습니다."
     # 특정일자 조회 끝
@@ -242,16 +238,19 @@ def schdl(reqdata, req_id, debugging):
         else:
             head = "%s부터 %s까지 조회합니다.\n\n" % (start.date(), end.date())
 
-        cal = getData.schdl_mass(start, end, req_id, debugging)
+        schdls = getData.schdl_mass(start, end, req_id, debugging)
         # 년, 월, 일, 일정 정보를 담은 튜플이 리스트로 묶여서 반환됨
 
-        for i in cal:
-            date = datetime.date(int(i[0]), int(i[1]), int(i[2]))  # 년, 월, 일
-            cal = i[3]  # 일정
-
-            cal = pstpr(cal)
-            if cal:
-                body = "%s%s-%s-%s(%s):\n%s\n" % (body, i[0], i[1], i[2], wday(date), cal)  # YYYY-MM-DD(Weekday)
+        # body 쓰기, 연속되는 일정은 묶어 처리함
+        for content, group in groupby(schdls, lambda k: k[3]):
+            list = [*group]
+            if list[0] != list[-1]:
+                start_date = datetime.date(*list[0][:3])
+                end_date = datetime.date(*list[-1][:3])
+                body = '%s%s(%s)~%s(%s):\n%s\n' % (body, start_date, wday(start_date), end_date, wday(end_date), content)
+            else:
+                date = datetime.date(*list[0][:3])
+                body = '%s%s(%s):\n%s\n' % (body, date, wday(date), content)
 
         if not body:
             body = "일정이 없습니다.\n"
@@ -430,7 +429,7 @@ def briefing(reqdata, req_id, debugging, ):
     @logging_time
     def f_cal():
         global briefing_schdl
-        briefing_schdl = pstpr(getData.schdl(date.year, date.month, date.day, req_id, debugging))
+        briefing_schdl = getData.schdl(date.year, date.month, date.day, req_id, debugging)
         if not briefing_schdl:
             log.info("[#%s] briefing@modules/skill.py: No Schedule" % req_id)
             briefing_schdl = "%s은 학사일정이 없습니다." % date_ko

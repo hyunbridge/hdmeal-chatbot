@@ -103,10 +103,6 @@ def tt(tt_grade, tt_class, year, month, date, req_id, debugging):
 
 # 학사일정 가져오기
 def schdl(year, month, date, req_id, debugging):
-    # 자료형 변환
-    year = str(year).zfill(4)
-    month = str(month).zfill(2)
-    date = str(date).zfill(2)
 
     log.info("[#%s] schdl@modules/getData.py: Started Fetching Schedule Data(%s-%s-%s)" % (req_id, year, month, date))
 
@@ -125,9 +121,10 @@ def schdl(year, month, date, req_id, debugging):
         return "일정이 없습니다."
 
     # 일정 있는지 확인
-    if date in data:
+    if str(date) in data:
         log.info("[#%s] schdl@modules/getData.py: Succeeded(%s-%s-%s)" % (req_id, year, month, date))
-        return data[date]
+        return data[str(date)]
+
     log.info("[#%s] schdl@modules/getData.py: No Schedule Data(%s-%s-%s)" % (req_id, year, month, date))
     return "일정이 없습니다."
 
@@ -138,14 +135,15 @@ def schdl_mass(start, end, req_id, debugging):
     between_date = list()
     schdl = list()
 
-    log.info("[#%s] schdl_mass@modules/getData.py: Started Fetching Mass Schedule Data(%s ~ %s)" % (req_id, start, end))
+    log.info("[#%s] schdl_mass@modules/getData.py: Started Fetching Mass Schedule Data(%s ~ %s)"
+             % (req_id, start.date(), end.date()))
 
     delta = (end - start).days  # 시작일과 종료일 사이의 일수를 구함
 
     for i in range(delta + 1):  # 리스트에 시작일과 종료일 사이의 모든 달과 날짜를 담음
         date = start + datetime.timedelta(days=i)
-        between_month.append((str(date.year).zfill(4), str(date.month).zfill(2)))
-        between_date.append((str(date.year).zfill(4), str(date.month).zfill(2), str(date.day).zfill(2)))
+        between_month.append((date.year, date.month))
+        between_date.append((date.year, date.month, date.day))
 
     between_month = sorted(list(set(between_month)))  # List의 중복을 제거하고 정렬
 
@@ -165,14 +163,14 @@ def schdl_mass(start, end, req_id, debugging):
             schdl.append((i[0], i[1], i[2], body))  # 년, 월, 일, 일정
             continue  # 이후 구문 실행 않음
 
-        if i[2] in data:  # 일정이 있는지 확인
-            body = data[i[2]]
+        if str(i[2]) in data:  # 일정이 있는지 확인
+            body = data[str(i[2])]
         else:  # 없으면
             body = "일정이 없습니다."
 
         schdl.append((i[0], i[1], i[2], body))  # 년, 월, 일, 일정
 
-    log.info("[#%s] schdl_mass@modules/getData.py: Succeeded(%s ~ %s)" % (req_id, start, end))
+    log.info("[#%s] schdl_mass@modules/getData.py: Succeeded(%s ~ %s)" % (req_id, start.date(), end.date()))
 
     return schdl
 

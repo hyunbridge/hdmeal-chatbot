@@ -20,7 +20,6 @@ def get_user(uid, req_id, debugging):
     log.info("[#%s] get_user@modules/user_json.py: Started Fetching User Info" % req_id)
     try:
         with open(path, encoding="utf-8") as data_file:
-            return_data = list()
             enc = hashlib.sha256()
             enc.update(uid.encode("utf-8"))
             enc_uid = enc.hexdigest()
