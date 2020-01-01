@@ -262,7 +262,7 @@ api.add_resource(LoL, '/lol/')
 
 # 서버 실행
 if __name__ == '__main__':
-    debugging = False
+    debugging = True
     # 커맨드라인 인자값(Test ID) 받기
     parser = argparse.ArgumentParser()
     parser.add_argument("--test-id", help="Test ID")
