@@ -9,11 +9,17 @@
 
 import hashlib
 import json
+import os
+import jwt
+import requests
+from flask import render_template, request, Blueprint
 from modules import log
 
 path = "data/user/user.json"
 admin_path = "data/user/admin.json"
-
+blueprint = Blueprint('user', __name__, template_folder='../data/templates')
+jwt_secret = os.getenv("SERVER_SECRET")
+recaptcha_secret = os.getenv("RECAPTCHA_SECRET")
 
 # 사용자 정보 읽기
 def get_user(uid, req_id, debugging):
@@ -119,6 +125,76 @@ def auth_admin(uid, req_id, debugging):
     else:
         log.info("[#%s] auth_admin@modules/user_json.py: Not Match" % req_id)
         return False
+
+# 관리자 페이지 정의
+@blueprint.route('/', methods=['GET'])
+def user_settings_get():
+    token = request.args.get('token', None)
+    if token:
+        try:
+            decoded = jwt.decode(token.encode("UTF-8"), jwt_secret, algorithms='HS384')
+        except jwt.ExpiredSignatureError:
+            return render_template('userSettings.html', no_form=True, alert_fail="토큰이 만료되었습니다."), 403
+        except jwt.InvalidTokenError:
+            return render_template('userSettings.html', no_form=True, alert_fail="토큰이 올바르지 않습니다."), 403
+        if "uid" in decoded:
+            user = get_user(decoded['uid'], "WEB", False)
+            return render_template('userSettings.html', classes=range(1, 13), uid=decoded["uid"], token=token,
+                                   current_grade=user[0], current_class=user[1])
+        else:
+            return render_template('userSettings.html', no_form=True, alert_fail="토큰이 올바르지 않습니다."), 403
+    else:
+        return render_template('userSettings.html', no_form=True, alert_fail="토큰이 없습니다."), 401
+
+
+@blueprint.route('/', methods=['POST'])
+def user_settings_post():
+    if ('method' in request.form and 'token' in request.form and 'grade' in request.form
+            and 'class' in request.form and 'recaptcha' in request.form):
+        try:
+            method = request.form['method']
+            token = request.form['token']
+            user_grade = int(request.form['grade'])
+            user_class = int(request.form['class'])
+            recaptcha = request.form['recaptcha']
+        except Exception:
+            return render_template('userSettings.html', no_form=True, alert_fail="요청이 올바르지 않습니다."), 400
+        try:
+            req = requests.post(
+                'https://www.google.com/recaptcha/api/siteverify?secret=%s&response=%s'
+                % (recaptcha_secret, recaptcha), data=None
+            )
+            rspns = req.json()
+        except Exception as error:
+            return render_template('userSettings.html', no_form=True, alert_fail="서버 오류가 발생했습니다."), 500
+        if rspns['success']:
+            if 0 < user_grade < 4 and 0 < user_class < 13:
+                try:
+                    decoded = jwt.decode(token.encode("UTF-8"), jwt_secret, algorithms='HS384')
+                except jwt.ExpiredSignatureError:
+                    return render_template('userSettings.html', no_form=True, alert_fail="토큰이 만료되었습니다."), 403
+                except jwt.InvalidTokenError:
+                    return render_template('userSettings.html', no_form=True, alert_fail="토큰이 올바르지 않습니다."), 403
+                if "uid" in decoded:
+                    uid = decoded["uid"]
+                else:
+                    return render_template('userSettings.html', no_form=True, alert_fail="토큰이 올바르지 않습니다."), 403
+                if method == 'update':
+                    manage_user(uid, user_grade, user_class, "WEB", False)
+                    return render_template('userSettings.html', classes=range(1, 13), uid=decoded["uid"], token=token,
+                                           alert_success="저장했습니다.", current_grade=user_grade, current_class=user_class)
+                elif method == 'delete':
+                    delete_user(uid, "WEB", False)
+                    return render_template('userSettings.html', classes=range(1, 13), uid=decoded["uid"], token=token,
+                                           alert_success="삭제했습니다.")
+                else:
+                    return render_template('userSettings.html', no_form=True, alert_fail="요청이 올바르지 않습니다."), 400
+            else:
+                return render_template('userSettings.html', no_form=True, alert_fail="요청이 올바르지 않습니다."), 400
+        else:
+            return render_template('userSettings.html', no_form=True, alert_fail="요청이 올바르지 않습니다."), 400
+    else:
+        return render_template('userSettings.html', no_form=True, alert_fail="요청이 올바르지 않습니다."), 400
 
 
 # 디버그

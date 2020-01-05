@@ -13,10 +13,10 @@ itsdangerous==1.1.0
 Jinja2==2.10.1
 MarkupSafe==1.1.1
 Pillow==6.2.0
-pyodbc==4.0.27
+PyJWT==1.4.2
 pytz==2019.1
 requests==2.22.0
-six==1.12.0
+six==1.13.0
 soupsieve==1.9.2
 urllib3==1.25.6
 Werkzeug==0.15.4

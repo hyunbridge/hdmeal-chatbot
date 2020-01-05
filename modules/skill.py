@@ -9,10 +9,12 @@
 
 import datetime
 import json
+import os
 import time
-from threading import Thread
-from modules import getData, cache, user, log, LoL
 from itertools import groupby
+from threading import Thread
+import jwt
+from modules import getData, cache, user, log, LoL
 
 
 # Skill 응답용 JSON 생성
@@ -470,10 +472,11 @@ def briefing(reqdata, req_id, debugging, ):
             log.err("[#%s] briefing@modules/skill.py: Failed to Fetch Timetable" % req_id)
             briefing_tt = "시간표 조회 중 오류가 발생했습니다."
         if tt_grade is not None or tt_class is not None:  # 사용자 정보 있을 때
-            briefing_tt = "%s 시간표:\n%s" % (date_ko,
-                                           getData.tt(tt_grade, tt_class, date.year, date.month, date.day, req_id,
-                                                      debugging)
-                                           .split('):\n\n')[1])  # 헤더부분 제거
+            tt = getData.tt(tt_grade, tt_class, date.year, date.month, date.day, req_id, debugging)
+            if tt == "등록된 데이터가 없습니다.":
+                briefing_tt = "등록된 시간표가 없습니다."
+            else:
+                briefing_tt = "%s 시간표:\n%s" % (date_ko, tt.split('):\n\n')[1])  # 헤더부분 제거
         else:
             log.info("[#%s] briefing@modules/skill.py: Non-Registered User" % req_id)
             briefing_tt = "등록된 사용자만 시간표를 볼 수 있습니다."
@@ -673,6 +676,35 @@ def lol(reqdata, req_id, debugging):
                 }
                 }
 
+def user_settings_web(reqdata, jwt_secret, req_id, debugging):
+    baseurl = os.getenv("BASE_URL")
+    try:
+        uid = json.loads(reqdata)["userRequest"]["user"]["id"]
+    except Exception:
+        log.err("[#%s] briefing@modules/skill.py: Failed to Fetch Timetable" % req_id)
+        return skill_simpletext("토큰 생성 중 오류가 발생했습니다.")
+    encoded = jwt.encode({'exp': datetime.datetime.utcnow() + datetime.timedelta(seconds=300),
+                          'uid': uid}, jwt_secret, algorithm='HS384')
+    return {'version': '2.0',
+            'template': {
+                'outputs': [
+                    {
+                        "basicCard": {
+                            "title": "내 정보 관리",
+                            "description": "아래 버튼을 클릭해 관리 페이지로 접속해 주세요.\n"
+                                           "링크는 5분 뒤 만료됩니다.",
+                            "buttons": [
+                                {
+                                    "action": "webLink",
+                                    "label": "내 정보 관리",
+                                    "webLinkUrl": baseurl + "user/settings/?token=" + encoded.decode("UTF-8")
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+            }
 
 # 디버그
 if __name__ == "__main__":
