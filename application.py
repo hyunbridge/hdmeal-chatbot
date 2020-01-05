@@ -13,7 +13,7 @@ import os
 import random
 from flask import Flask
 from flask_restful import request, Api, Resource
-from modules import getData, skill, FB, log, cache
+from modules import getData, skill, FB, log, cache, user
 
 # 디버그용
 debugging = False
@@ -29,7 +29,8 @@ today_date = 14
 #        or not os.getenv("HDMEAL_TOKENS") or not os.getenv("RIOT_TOKEN")):
 #    print("환경변수 설정이 바르게 되어있지 않습니다.")
 #    exit(1)
-if not os.getenv("HDMEAL_TOKENS") or not os.getenv("RIOT_TOKEN"):
+if (not os.getenv("HDMEAL_TOKENS") or not os.getenv("RIOT_TOKEN") or not os.getenv("SERVER_SECRET")
+        or not os.getenv("RECAPTCHA_SECRET") or not os.getenv("BASE_URL")):
     print("환경변수 설정이 바르게 되어있지 않습니다.")
     exit(1)
 tokens = ast.literal_eval(os.getenv("HDMEAL_TOKENS"))
@@ -80,9 +81,11 @@ def auth(original_fn):
 
 
 # Flask 인스턴스 생성
-app = Flask(__name__)
+app = Flask(__name__, static_folder='./data/static')
 api = Api(app)
-
+app.secret_key = os.getenv("SERVER_SECRET")
+jwt_secret = os.getenv("SERVER_SECRET")
+app.register_blueprint(user.blueprint, url_prefix='/user/settings')
 log.info("Server Started")
 
 
@@ -240,6 +243,14 @@ class LoL(Resource):
     def post():
         return skill.lol(request.data, req_id, debugging)
 
+# 내 정보 관리(웹)
+class UserSettings(Resource):
+    @staticmethod
+    @request_id
+    @auth
+    def post():
+        return skill.user_settings_web(request.data, jwt_secret, req_id, debugging)
+
 
 # URL Router에 맵핑.(Rest URL정의)
 api.add_resource(Date, '/date/<int:year>-<int:month>-<int:date>')
@@ -253,6 +264,7 @@ api.add_resource(CacheHealthCheck, '/cache/healthcheck/')
 api.add_resource(CacheHealthCheckSkill, '/cache/healthcheck/skill/')
 api.add_resource(ManageUser, '/user/manage/')
 api.add_resource(DeleteUser, '/user/delete/')
+api.add_resource(UserSettings, '/user/settings/get-token/')
 api.add_resource(WTemp, '/wtemp/')
 api.add_resource(Cal, '/cal/')
 api.add_resource(Facebook, '/fb/')
