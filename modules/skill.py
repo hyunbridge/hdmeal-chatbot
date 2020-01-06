@@ -677,7 +677,7 @@ def lol(reqdata, req_id, debugging):
                 }
 
 def user_settings_web(reqdata, jwt_secret, req_id, debugging):
-    baseurl = os.getenv("BASE_URL")
+    url = os.getenv("SETTINGS_URL")
     try:
         uid = json.loads(reqdata)["userRequest"]["user"]["id"]
     except Exception:
@@ -697,7 +697,7 @@ def user_settings_web(reqdata, jwt_secret, req_id, debugging):
                                 {
                                     "action": "webLink",
                                     "label": "내 정보 관리",
-                                    "webLinkUrl": baseurl + "user/settings/?token=" + encoded.decode("UTF-8")
+                                    "webLinkUrl": url + "?token=" + encoded.decode("UTF-8")
                                 }
                             ]
                         }
