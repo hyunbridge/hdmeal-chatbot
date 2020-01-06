@@ -30,7 +30,7 @@ today_date = 14
 #    print("환경변수 설정이 바르게 되어있지 않습니다.")
 #    exit(1)
 if (not os.getenv("HDMEAL_TOKENS") or not os.getenv("RIOT_TOKEN") or not os.getenv("SERVER_SECRET")
-        or not os.getenv("RECAPTCHA_SECRET") or not os.getenv("BASE_URL")):
+        or not os.getenv("RECAPTCHA_SECRET") or not os.getenv("SETTINGS_URL")):
     print("환경변수 설정이 바르게 되어있지 않습니다.")
     exit(1)
 tokens = ast.literal_eval(os.getenv("HDMEAL_TOKENS"))
@@ -85,7 +85,6 @@ app = Flask(__name__, static_folder='./data/static')
 api = Api(app)
 app.secret_key = os.getenv("SERVER_SECRET")
 jwt_secret = os.getenv("SERVER_SECRET")
-app.register_blueprint(user.blueprint, url_prefix='/user/settings')
 log.info("Server Started")
 
 
@@ -243,13 +242,35 @@ class LoL(Resource):
     def post():
         return skill.lol(request.data, req_id, debugging)
 
-# 내 정보 관리(웹)
+# 내 정보 관리(토큰 생성)
 class UserSettings(Resource):
     @staticmethod
     @request_id
     @auth
     def post():
         return skill.user_settings_web(request.data, jwt_secret, req_id, debugging)
+# 내 정보 관리(API)
+cors_headers = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "application/json,Content-Type,Content-Length,Access-Control-Allow-Origin,Access-Control-Allow-Headers,Server,Date",
+    "Access-Control-Allow-Methods": "GET, POST, DELETE"
+}
+class UserSettingsREST(Resource):
+    @staticmethod
+    @request_id
+    def get():
+        return user.user_settings_rest_get(request, req_id, debugging) + (cors_headers,)
+    @staticmethod
+    @request_id
+    def post():
+        return user.user_settings_rest_post(request, req_id, debugging) + (cors_headers,)
+    @staticmethod
+    @request_id
+    def delete():
+        return user.user_settings_rest_delete(request, req_id, debugging) + (cors_headers,)
+    @staticmethod
+    def options():
+        return None, 200, cors_headers
 
 
 # URL Router에 맵핑.(Rest URL정의)
@@ -265,6 +286,7 @@ api.add_resource(CacheHealthCheckSkill, '/cache/healthcheck/skill/')
 api.add_resource(ManageUser, '/user/manage/')
 api.add_resource(DeleteUser, '/user/delete/')
 api.add_resource(UserSettings, '/user/settings/get-token/')
+api.add_resource(UserSettingsREST, '/user/settings/api-gateway/')
 api.add_resource(WTemp, '/wtemp/')
 api.add_resource(Cal, '/cal/')
 api.add_resource(Facebook, '/fb/')
