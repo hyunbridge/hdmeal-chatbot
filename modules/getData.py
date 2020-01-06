@@ -205,20 +205,23 @@ def wtemp(req_id, debugging):
             except Exception:
                 log.err("[#%s] wtemp@modules/getData.py: Failed to Delete Cache" % req_id)
                 return "측정소 또는 서버 오류입니다."
-            parse()  # 파싱
+            parser_response = parse()  # 파싱
         # 캐시 유효하면
         if (datetime.datetime.now() - datetime.datetime.fromtimestamp(data["timestamp"])
                 < datetime.timedelta(minutes=76)):  # 실시간수질정보시스템상 자료처리 시간 고려, 유효기간 76분으로 설정
             log.info("[#%s] wtemp@modules/getData.py: Use Data in Cache" % req_id)
             date = datetime.datetime.fromtimestamp(data["timestamp"])
             temp = data["temp"] + "°C"
+            parser_response = None
         else:  # 캐시 무효하면
             log.info("[#%s] wtemp@modules/getData.py: Cache Expired" % req_id)
-            parse()  # 파싱
+            parser_response = parse()  # 파싱
     else:  # 캐시 없으면
         log.info("[#%s] temp@modules/getData.py: No Cache" % req_id)
-        parse()  # 파싱
+        parser_response = parse()  # 파싱
 
+    if parser_response == "측정소 또는 서버 오류입니다.":
+        return "측정소 또는 서버 오류입니다."
     time = date.hour
     # 24시간제 -> 12시간제 변환
     if time == 0 or time == 24:  # 자정
