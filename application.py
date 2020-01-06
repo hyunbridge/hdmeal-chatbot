@@ -259,15 +259,27 @@ class UserSettingsREST(Resource):
     @staticmethod
     @request_id
     def get():
-        return user.user_settings_rest_get(request, req_id, debugging) + (cors_headers,)
+        response = user.user_settings_rest_get(request, req_id, debugging)
+        if isinstance(response, tuple):
+            return response + (cors_headers,)
+        else:
+            return (response, 200, cors_headers)
     @staticmethod
     @request_id
     def post():
-        return user.user_settings_rest_post(request, req_id, debugging) + (cors_headers,)
+        response = user.user_settings_rest_post(request, req_id, debugging)
+        if isinstance(response, tuple):
+            return response + (cors_headers,)
+        else:
+            return (response, 200, cors_headers)
     @staticmethod
     @request_id
     def delete():
-        return user.user_settings_rest_delete(request, req_id, debugging) + (cors_headers,)
+        response = user.user_settings_rest_delete(request, req_id, debugging)
+        if isinstance(response, tuple):
+            return response + (cors_headers,)
+        else:
+            return (response, 200, cors_headers)
     @staticmethod
     def options():
         return None, 200, cors_headers
