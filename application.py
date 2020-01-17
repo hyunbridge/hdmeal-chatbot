@@ -284,6 +284,12 @@ class UserSettingsREST(Resource):
     def options():
         return None, 200, cors_headers
 
+class Notify(Resource):
+    @staticmethod
+    @request_id
+    @auth
+    def post():
+        return skill.notify(request.data, req_id, debugging)
 
 # URL Router에 맵핑.(Rest URL정의)
 api.add_resource(Date, '/date/<int:year>-<int:month>-<int:date>')
@@ -305,6 +311,7 @@ api.add_resource(Facebook, '/fb/')
 api.add_resource(Briefing, '/briefing/')
 api.add_resource(Commits, '/commits/')
 api.add_resource(LoL, '/lol/')
+api.add_resource(Notify, '/notify/')
 
 # 서버 실행
 if __name__ == '__main__':
