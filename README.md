@@ -1,16 +1,16 @@
-# 흥덕중 급식봇
+# 흥덕고 급식봇
 
-흥덕중 급식봇은 흥덕중학교 학교생활에 유용한 정보들을 간단하게 조회할 수 있는 카카오톡 챗봇입니다.
+흥덕고 급식봇은 흥덕고등학교 학교생활에 유용한 정보들을 간단하게 조회할 수 있는 카카오톡 챗봇입니다.
 
-이 프로그램은 카카오 i 오픈빌더의 Skill 서버 및 기타 용도로 사용되기 위해 만들어진 API 서버입니다.
+이 프로그램은 카카오 i 오픈빌더의 Skill 서버, Dialogflow의 fulfillment 서버 및 기타 용도로 사용되기 위해 만들어진 API 서버입니다.
 
-[![채널 추가]( https://developers.kakao.com/assets/img/about/logos/channel/friendadd_large_yellow_rect.png )]( http://pf.kakao.com/_xkxeaGT )
+
 
 
 
 ## 기능
 
-흥덕중 급식봇은 이런 기능들을 지원합니다:
+흥덕고 급식봇은 이런 기능들을 지원합니다:
 
 * 특정 날짜의 식단 조회 API 제공
 * Facebook에 내일의 급식 게시
