@@ -23,3 +23,4 @@ six==1.13.0
 soupsieve==1.9.2
 urllib3==1.25.6
 Werkzeug==0.15.4
+dnspython==1.16.0

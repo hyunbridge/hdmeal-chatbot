@@ -17,10 +17,7 @@ from numpy import base_repr
 from modules import conf, log
 
 # DB정보 불러오기
-username = conf.configs['DataBase']['Username']
-password = conf.configs['DataBase']['Password']
-server = conf.configs['DataBase']['Server']
-connection = pymongo.MongoClient("mongodb://%s:%s@%s" % (username, password, server))
+connection = pymongo.MongoClient(conf.configs['DataBase']['ConnectString'])
 db = connection.hdmeal
 utterances_collection = db.utterances
 # 토큰 불러오기
