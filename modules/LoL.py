@@ -14,14 +14,13 @@ import urllib.parse
 import urllib.request
 from collections import Counter
 
-from modules import log
+from modules import log, conf
 
 # 디버깅용
-summoner_name_for_debug = "{SUMMONER-NAME}"
-api_key_for_debug = "RGAPI-{RIOT-TOKEN}"
+summoner_name_for_debug = "Hide on Bush"
 
 api_baseurl = "https://kr.api.riotgames.com/"
-api_key = os.getenv("RIOT_TOKEN")
+api_key = conf.configs['Tokens']['Riot']
 
 
 # Riot Games API 사용
@@ -32,7 +31,6 @@ def parse(summoner_name, req_id, debugging):
     if debugging:
         if not summoner_name:
             summoner_name = summoner_name_for_debug
-        api_key = api_key_for_debug
 
     header = {
         'X-Riot-Token': api_key
@@ -94,13 +92,13 @@ def parse(summoner_name, req_id, debugging):
     data["summoner"] = {
         "name": summoner_data["name"],  # 소환사명
         "level": summoner_data["summonerLevel"],  # 소환사 레벨
-        "profileIcon": ("https://ddragon.leagueoflegends.com/cdn/9.24.2/img/profileicon/%s.png"
-                        % summoner_data["profileIconId"]),  # 프로필 아이콘
+        "profileIcon": ("https://avatar.leagueoflegends.com/KR/%s.png"
+                        % urllib.parse.quote(summoner_data["name"])),  # 프로필 아이콘
         "OPGG": "https://www.op.gg/summoner/userName=" + urllib.parse.quote(summoner_name)  # OP.GG 링크
     }
 
     # 승률 계산
-    def calculate_winning_late(wins, losses):
+    def calculate_winning_rate(wins, losses):
         wins = int(wins)
         losses = int(losses)
         return int(wins / (wins + losses) * 100)
@@ -113,7 +111,7 @@ def parse(summoner_name, req_id, debugging):
             data["ranked_solo"] = {
                 "wins": league["wins"],
                 "losses": league["losses"],
-                "winningRate": calculate_winning_late(league["wins"], league["losses"]),
+                "winningRate": calculate_winning_rate(league["wins"], league["losses"]),
                 "rank": league["rank"],
                 "tier": league["tier"],
                 "leaguePoints": league["leaguePoints"]
@@ -123,7 +121,7 @@ def parse(summoner_name, req_id, debugging):
             data["ranked_flex"] = {
                 "wins": league["wins"],
                 "losses": league["losses"],
-                "winningRate": calculate_winning_late(league["wins"], league["losses"]),
+                "winningRate": calculate_winning_rate(league["wins"], league["losses"]),
                 "rank": league["rank"],
                 "tier": league["tier"],
                 "leaguePoints": league["leaguePoints"]

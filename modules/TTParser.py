@@ -14,14 +14,11 @@ import json
 import os
 import urllib.parse as urlparse
 import urllib.request
-from modules import log
+from modules import log, conf
 
 
-# 학교가 속한 지역과 학교의 이름을 정확히 입력
-# 검색 결과가 1개로 특정되도록 해주세요.
-# 검색 결과가 2건 이상일 경우, 첫 번째 학교를 선택합니다.
-school_region = "경기"
-school_name = "흥덕중학교"
+school_region = conf.configs['School']['Region']
+school_name = conf.configs['School']['Name']
 
 
 def parse(tt_grade, tt_class, year, month, date, req_id, debugging):

@@ -7,37 +7,40 @@
 # Copyright 2019, Hyungyo Seo
 # modules/user.py - 사용자 관리 및 인증을 담당하는 스크립트입니다.
 
-import hashlib
 import json
-import os
-import jwt
-import requests
-from modules import log
+import pymongo
+from modules import log, conf, security
 
-path = "data/user/user.json"
-admin_path = "data/user/admin.json"
-jwt_secret = os.getenv("SERVER_SECRET")
-recaptcha_secret = os.getenv("RECAPTCHA_SECRET")
+# DB정보 불러오기
+username = conf.configs['DataBase']['Username']
+password = conf.configs['DataBase']['Password']
+server = conf.configs['DataBase']['Server']
+connection = pymongo.MongoClient("mongodb://%s:%s@%s" % (username, password, server))
+db = connection.hdmeal
+users_collection = db.users
+# 학급수 불러오기
+classes = int(conf.configs['School']['Classes'])
+# 오류 메세지
+errors_conf = conf.configs['Misc']['Errors']
+
+
+def hdm_error(code: str):
+    return {'message': errors_conf[code][0]}, int(errors_conf[code][1])
+
 
 # 사용자 정보 읽기
-def get_user(uid, req_id, debugging):
+def get_user(uid: str, req_id: str, debugging: bool):
     log.info("[#%s] get_user@modules/user.py: Started Fetching User Info" % req_id)
     try:
-        with open(path, encoding="utf-8") as data_file:
-            enc = hashlib.sha256()
-            enc.update(uid.encode("utf-8"))
-            enc_uid = enc.hexdigest()
-            data = json.load(data_file)
+        data = users_collection.find_one({'UID': uid})
         if debugging:
             print(data)
-        if not enc_uid in data:  # 사용자 정보 없을 때
+        if not data:  # 사용자 정보 없을 때
             return_data = [None, None]
             log.info("[#%s] get_user@modules/user.py: No User Info" % req_id)
             return return_data
-        if debugging:
-            print(data[enc_uid])
-        if data[enc_uid][0] != "" or data[enc_uid][1] != "":  # 사용자 정보 있을 때
-            return_data = [data[enc_uid][0], data[enc_uid][1]]
+        if data['Grade'] and data['Class']:  # 사용자 정보 있을 때
+            return_data = [data['Grade'], data['Class']]
             log.info("[#%s] get_user@modules/user.py: Succeeded" % req_id)
         else:  # 사용자 정보 없을 때
             return_data = [None, None]
@@ -48,60 +51,41 @@ def get_user(uid, req_id, debugging):
 
 
 # 사용자 생성 및 수정
-def manage_user(uid, user_grade, user_class, req_id, debugging):
+def manage_user(uid: str, user_grade: int, user_class: int, req_id: str, debugging: bool):
     log.info("[#%s] manage_user@modules/user.py: Started Managing User Info" % req_id)
     try:
-        with open(path, encoding="utf-8") as data_file:
-            enc = hashlib.sha256()
-            enc.update(uid.encode("utf-8"))
-            enc_uid = enc.hexdigest()
-            data = json.load(data_file)
+        data = users_collection.find_one({'UID': uid})
         if debugging:
             print(data)
-        if enc_uid in data:  # 사용자 정보 있을 때
-            if data[enc_uid][0] == user_grade and data[enc_uid][1] == user_class:  # 사용자 정보 똑같을 때
+        if data:  # 사용자 정보 있을 때
+            if data['Grade'] == user_grade and data['Class'] == user_class:  # 사용자 정보 똑같을 때
                 log.info("[#%s] manage_user@modules/user.py: Same" % req_id)
                 return "Same"
-            else:  # 사용자 정보 있고 같지도 않을 때 - 업데이트 (삭제 후 재생성)
-                del data[enc_uid]
-                if debugging:
-                    print("DEL USER")
+            else:  # 사용자 정보 있고 같지도 않을 때 - 업데이트
+                data = users_collection.update({'UID': uid}, {'$set': {'Grade': user_grade, 'Class': user_class}})
                 log.info("[#%s] manage_user@modules/user.py: Updated" % req_id)
-                return_msg = "Updated"
+                return "Updated"
         else:  # 사용자 정보 없을 때 - 생성
+            users_collection.insert_one({"UID": uid, "Grade": user_grade, "Class": user_class})
             log.info("[#%s] manage_user@modules/user.py: Registered" % req_id)
-            return_msg = "Registered"
-        user_data = [int(user_grade), int(user_class)]
-        data[enc_uid] = user_data
-        with open(path, "w", encoding="utf-8") as write_file:
-            json.dump(data, write_file, ensure_ascii=False, indent="\t")
-            log.info("[#%s] manage_user@modules/user.py: Succeeded" % req_id)
-            return return_msg
+            return "Registered"
     except Exception:
         log.err("[#%s] manage_user@modules/user.py: Failed" % req_id)
         return Exception
 
 
 # 사용자 삭제
-def delete_user(uid, req_id, debugging):
+def delete_user(uid: str, req_id: str, debugging: bool):
     log.info("[#%s] delete_user@modules/user.py: Started Deleting User Info" % req_id)
     try:
-        with open(path, encoding="utf-8") as data_file:
-            enc = hashlib.sha256()
-            enc.update(uid.encode("utf-8"))
-            enc_uid = enc.hexdigest()
-            data = json.load(data_file)
-        if enc_uid in data:  # 사용자 정보 있을 때
+        data = users_collection.find_one({'UID': uid})
+        if data:  # 사용자 정보 있을 때
             if debugging:
                 print("DEL USER")
-            del data[enc_uid]
+            users_collection.remove({'UID': uid})
         else:  # 사용자 정보 없을 때
             log.info("[#%s] delete_user@modules/user.py: No User Info" % req_id)
             return "NotExist"
-        with open(path, "w", encoding="utf-8") as write_file:
-            json.dump(data, write_file, ensure_ascii=False, indent="\t")
-            log.info("[#%s] delete_user@modules/user.py: Succeeded" % req_id)
-            return "Deleted"
     except Exception:
         log.err("[#%s] delete_user@modules/user.py: Failed" % req_id)
         return Exception
@@ -109,131 +93,132 @@ def delete_user(uid, req_id, debugging):
 
 # 관리자 인증
 def auth_admin(uid, req_id, debugging):
-    with open(admin_path, encoding="utf-8") as data_file:
-        enc = hashlib.sha256()
-        enc.update(uid.encode("utf-8"))
-        enc_uid = enc.hexdigest()
-        data = json.load(data_file)
+    data = conf.configs['Admins']
     if debugging:
-        print(enc_uid)
+        print(uid)
         print(data)
-    if enc_uid in data:
+    if uid in data:
         log.info("[#%s] auth_admin@modules/user.py: Match" % req_id)
         return True
     else:
         log.info("[#%s] auth_admin@modules/user.py: Not Match" % req_id)
         return False
 
-errors = {
-    "ServerError": ({"message": "서버 오류가 발생했습니다."}, 500),
-    "InvalidRequest": ({"message": "올바르지 않은 요청입니다."}, 403),
-    "NoToken": ({"message": "토큰이 없습니다."}, 401),
-    "ExpiredToken": ({"message": "만료된 토큰입니다."}, 403),
-    "InvalidToken": ({"message": "올바르지 않은 토큰입니다."}, 403),
-    "NoRecaptchaToken": ({"message": "리캡챠 토큰이 없습니다."}, 401),
-    "InvalidRecaptchaToken": ({"message": "만료된 리캡챠 토큰입니다."}, 403),
-    "RecaptchaTokenValidationError": ({"message": "올바르지 않은 리캡챠 토큰입니다."}, 500)
-}
-classes = 12
+
+# 요청 데이터 해석
 def decode_data(original_fn):
     def wrapper_fn(*args, **kwargs):
         global req_data
         req_data = json.loads(args[0].data)
         return original_fn(*args, **kwargs)
+
     return wrapper_fn
 
+
+# JWT 토큰 검증
 def validate_token(original_fn):
     def wrapper_fn(*args, **kwargs):
-        global token, decoded
-        if 'token' in req_data:
+        if req_data['token']:
+            global uid, token
             token = req_data['token']
-            try:
-                decoded = jwt.decode(token.encode("UTF-8"), jwt_secret, algorithms='HS384')
-            except jwt.ExpiredSignatureError:
-                return errors["ExpiredToken"]
-            except jwt.InvalidTokenError:
-                return errors["InvalidToken"]
-            return original_fn(*args, **kwargs)
+            validation: tuple = security.validate_token(token, args[1])
+            if validation[0]:
+                uid = validation[1]
+                return original_fn(*args, **kwargs)
+            else:
+                return hdm_error(validation[1])
         else:
-            return errors["NoToken"]
+            return hdm_error("NoToken")
+
     return wrapper_fn
 
+
+# 리캡챠 토큰 검증
 def validate_recaptcha(original_fn):
     def wrapper_fn(*args, **kwargs):
         global token, decoded
         if 'recaptcha' in req_data:
-            try:
-                req = requests.post(
-                    'https://www.google.com/recaptcha/api/siteverify?secret=%s&response=%s'
-                    % (recaptcha_secret, req_data['recaptcha']), data=None
-                )
-                rspns = req.json()
-            except Exception as error:
-                return errors["RecaptchaTokenValidationError"]
-            if rspns['success']:
+            validation: tuple = security.validate_recaptcha(req_data['recaptcha'], args[1])
+            if validation[0]:
                 return original_fn(*args, **kwargs)
             else:
-                return errors["InvalidRecaptchaToken"]
+                return hdm_error(validation[1])
         else:
-            return errors["NoRecaptchaToken"]
+            log.info("[#%s] validate_recaptcha@modules/user.py: No Recaptcha Token" % args[1])
+            return hdm_error("NoRecaptchaToken")
+
     return wrapper_fn
 
 
+# 사용자 설정 - GET
 def user_settings_rest_get(req, req_id, debugging):
+    # 토큰이 Query Param에 있기 때문에 해석 데코레이터 사용하지 않음
     global req_data
     req_data = dict()
     req_data["token"] = req.args.get('token', None)
+
     @validate_token
-    def inner(req, req_id, debugging):
-        if "uid" in decoded:
+    def inner(req_id, debugging):
+        if uid:
             try:
-                user = get_user(decoded['uid'], req_id, debugging)
+                user = get_user(uid, req_id, debugging)
             except Exception as error:
                 log.err("[#%s] user_settings_rest_get@modules/user.py: %s" % (req_id, error))
-                return errors["ServerError"]
-            return {'token': token, 'classes': list(range(1, classes + 1)), 'uid': decoded["uid"],
+                return hdm_error("ServerError")
+            return {'token': token, 'classes': list(range(1, classes + 1)), 'uid': uid,
                     'current_grade': user[0], 'current_class': user[1]}
         else:
-            return errors["InvalidToken"]
-    return inner(req, req_id, debugging)
+            return hdm_error("InvalidToken")
 
+    return inner(req_id, debugging)
+
+
+# 사용자 설정 - POST
 @decode_data
 @validate_recaptcha
 @validate_token
 def user_settings_rest_post(req, req_id, debugging):
+    if not uid:
+        return hdm_error("InvalidRequest")
     if "user_grade" in req_data and "user_class" in req_data:
         user_grade = int(req_data["user_grade"])
         user_class = int(req_data["user_class"])
         if 0 < user_grade < 4 and 0 < user_class <= classes:
             try:
-                manage_user(decoded['uid'], user_grade, user_class, req_id, debugging)
+                manage_user(uid, user_grade, user_class, req_id, debugging)
             except Exception as error:
                 log.err("[#%s] user_settings_rest_post@modules/user.py: %s" % (req_id, error))
-                return errors["ServerError"]
+                return hdm_error("ServerError")
             return {'message': "저장했습니다."}
         else:
-            return errors["InvalidRequest"]
+            return hdm_error("InvalidRequest")
     else:
-        return errors["InvalidRequest"]
+        return hdm_error("InvalidRequest")
 
+
+# 사용자 설정 - DELETE
 @decode_data
 @validate_recaptcha
 @validate_token
 def user_settings_rest_delete(req, req_id, debugging):
+    if not uid:
+        return hdm_error("InvalidRequest")
     try:
-        delete_user(decoded['uid'], req_id, debugging)
+        delete_user(uid, req_id, debugging)
     except Exception as error:
         log.err("[#%s] user_settings_rest_delete@modules/user.py: %s" % (req_id, error))
-        return errors["ServerError"]
+        return hdm_error("ServerError")
     return {'message': "삭제했습니다."}
+
 
 # 디버그
 if __name__ == "__main__":
+    log.init()
     # 0 - GetUser, 1 - ManageUser, 2 - DeleteUser
-    flag = 1
+    flag = 2
     user_id = "uid"
-    user_grade = "3"
-    user_class = "11"
+    user_grade = 1
+    user_class = 1
 
     path = "../data/user/user.json"
     admin_path = "../data/user/admin.json"
