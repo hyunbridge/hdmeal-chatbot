@@ -7,13 +7,17 @@
 # Copyright 2019, Hyungyo Seo
 
 import argparse
-import ast
 import datetime
-import os
-import random
+import hashlib
+import json
+import re
+import requests
 from flask import Flask
 from flask_restful import request, Api, Resource
-from modules import getData, skill, FB, log, cache, user
+from modules import conf
+
+conf.load()
+from modules import getData, log, cache, user, chat, security, FB
 
 # 디버그용
 debugging = False
@@ -23,22 +27,7 @@ today_year = 2019
 today_month = 7
 today_date = 14
 
-# 환경변수 있는지 확인
-# DEPRECATED #
-# if (not os.getenv("DB_SERVER") or not os.getenv("DB_NAME") or not os.getenv("DB_UID") or not os.getenv("DB_PWD")
-#        or not os.getenv("HDMEAL_TOKENS") or not os.getenv("RIOT_TOKEN")):
-#    print("환경변수 설정이 바르게 되어있지 않습니다.")
-#    exit(1)
-if (not os.getenv("HDMEAL_TOKENS") or not os.getenv("RIOT_TOKEN") or not os.getenv("SERVER_SECRET")
-        or not os.getenv("RECAPTCHA_SECRET") or not os.getenv("SETTINGS_URL")):
-    print("환경변수 설정이 바르게 되어있지 않습니다.")
-    exit(1)
-tokens = ast.literal_eval(os.getenv("HDMEAL_TOKENS"))
-if not isinstance(tokens, dict):
-    print("환경변수 설정이 바르게 되어있지 않습니다.")
-    exit(1)
-
-# 로거 초기화
+# 초기화
 log.init()
 
 
@@ -50,9 +39,7 @@ def request_id(original_fn):
         if test_id:
             req_id = test_id
         else:
-            rand = str(random.randint(1, 99999)).zfill(5)  # 5자리 난수 생성
-            tmstm = str(int(datetime.datetime.now().timestamp()))  # 타임스탬프 생성
-            req_id = str(hex(int(rand + tmstm)))[2:].zfill(13)  # 난수 + 타임스탬프 합치고 HEX 변환, 13자리 채우기
+            req_id = security.generate_req_id()
         return original_fn(*args, **kwargs)
 
     return wrapper_fn
@@ -66,12 +53,10 @@ def auth(original_fn):
             log.info("[#%s] Bypassing Authorization")
             return original_fn(*args, **kwargs)
         else:
-            if "HDMeal-Token" in request.headers:
-                if request.headers["HDMeal-Token"] in tokens:
-                    log.info('[#%s] Authorized with Token "%s"' % (req_id, tokens[request.headers["HDMeal-Token"]]))
+            if "X-HDMeal-Token" in request.headers:
+                if security.auth(request.headers["X-HDMeal-Token"], req_id):
                     return original_fn(*args, **kwargs)
                 else:
-                    log.info('[#%s] Failed to Authorize(Token Not Match)' % req_id)
                     return {'version': '2.0', 'data': {'msg': "미승인 토큰"}}, 403
             else:
                 log.info('[#%s] Failed to Authorize(No Token)' % req_id)
@@ -83,71 +68,7 @@ def auth(original_fn):
 # Flask 인스턴스 생성
 app = Flask(__name__, static_folder='./data/static')
 api = Api(app)
-app.secret_key = os.getenv("SERVER_SECRET")
-jwt_secret = os.getenv("SERVER_SECRET")
 log.info("Server Started")
-
-
-# 특정 날짜 식단 조회
-class Date(Resource):
-    @request_id
-    @auth
-    def get(self, year, month, date):
-        return getData.meal(year, month, date, req_id, debugging)
-
-
-# Skill 식단 조회
-class Meal(Resource):
-    @staticmethod
-    @request_id
-    @auth
-    def post():
-        return skill.meal(request.data, req_id, debugging)
-
-
-# Skill 특정날짜(고정값) 식단 조회
-class MealSpecificDate(Resource):
-    @staticmethod
-    @request_id
-    @auth
-    def post():
-        return skill.meal_specific_date(request.data, req_id, debugging)
-
-
-# Skill 시간표 조회 (등록 사용자용)
-class TimetableRegistered(Resource):
-    @staticmethod
-    @request_id
-    @auth
-    def post():
-        return skill.tt_registered(request.data, req_id, debugging)
-
-
-# Skill 시간표 조회 (미등록 사용자용)
-class Timetable(Resource):
-    @staticmethod
-    @request_id
-    @auth
-    def post():
-        return skill.tt(request.data, req_id, debugging)
-
-
-# 캐시 비우기
-class PurgeCache(Resource):
-    @staticmethod
-    @request_id
-    @auth
-    def post():
-        return skill.purge_cache(request.data, req_id, debugging)
-
-
-# 캐시 목록 보여주기
-class ListCache(Resource):
-    @staticmethod
-    @request_id
-    @auth
-    def post():
-        return skill.get_cache(request.data, req_id, debugging)
 
 
 # 캐시 상태확인
@@ -159,102 +80,14 @@ class CacheHealthCheck(Resource):
         return cache.health_check(req_id, debugging)
 
 
-# 캐시 상태확인(Skill)
-class CacheHealthCheckSkill(Resource):
-    @staticmethod
-    @request_id
-    @auth
-    def post():
-        return skill.check_cache(request.data, req_id, debugging)
-
-
-# 사용자 관리
-class ManageUser(Resource):
-    @staticmethod
-    @request_id
-    @auth
-    def post():
-        return skill.manage_user(request.data, req_id, debugging)
-
-
-# 사용자 삭제
-class DeleteUser(Resource):
-    @staticmethod
-    @request_id
-    @auth
-    def post():
-        return skill.delete_user(request.data, req_id, debugging)
-
-
-# 한강 수온 조회
-class WTemp(Resource):
-    @staticmethod
-    @request_id
-    @auth
-    def post():
-        return skill.wtemp(req_id, debugging)
-
-
-# 학사일정 조회
-class Cal(Resource):
-    @staticmethod
-    @request_id
-    @auth
-    def post():
-        return skill.schdl(request.data, req_id, debugging)
-
-
-# 페이스북 포스팅
-class Facebook(Resource):
-    @staticmethod
-    @request_id
-    @auth
-    def post():
-        if "X-FB-Token" in request.headers:
-            return FB.publish(request.headers["X-FB-Token"], req_id, debugging)
-        else:
-            return FB.publish(None, req_id, debugging)
-
-
-# 급식봇 브리핑
-class Briefing(Resource):
-    @staticmethod
-    @request_id
-    @auth
-    def post():
-        return skill.briefing(request.data, req_id, debugging)
-
-
-# Repo 커밋 조회
-class Commits(Resource):
-    @staticmethod
-    @request_id
-    @auth
-    def post():
-        return skill.commits(req_id, debugging)
-
-
-# 롤 전적조회
-class LoL(Resource):
-    @staticmethod
-    @request_id
-    @auth
-    def post():
-        return skill.lol(request.data, req_id, debugging)
-
-# 내 정보 관리(토큰 생성)
-class UserSettings(Resource):
-    @staticmethod
-    @request_id
-    @auth
-    def post():
-        return skill.user_settings_web(request.data, jwt_secret, req_id, debugging)
 # 내 정보 관리(API)
 cors_headers = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "application/json,Content-Type,Content-Length,Access-Control-Allow-Origin,Access-Control-Allow-Headers,Server,Date",
     "Access-Control-Allow-Methods": "GET, POST, DELETE"
 }
+
+
 class UserSettingsREST(Resource):
     @staticmethod
     @request_id
@@ -264,6 +97,7 @@ class UserSettingsREST(Resource):
             return response + (cors_headers,)
         else:
             return (response, 200, cors_headers)
+
     @staticmethod
     @request_id
     def post():
@@ -272,6 +106,7 @@ class UserSettingsREST(Resource):
             return response + (cors_headers,)
         else:
             return (response, 200, cors_headers)
+
     @staticmethod
     @request_id
     def delete():
@@ -280,38 +115,197 @@ class UserSettingsREST(Resource):
             return response + (cors_headers,)
         else:
             return (response, 200, cors_headers)
+
     @staticmethod
     def options():
         return None, 200, cors_headers
 
+
+# 푸시 알림 보내기
 class Notify(Resource):
     @staticmethod
     @request_id
     @auth
     def post():
-        return skill.notify(request.data, req_id, debugging)
+        now = datetime.datetime.now()
+        onesignal_app_id = conf.configs['Tokens']['OneSignal']['AppID']
+        onesignal_api_key = conf.configs['Tokens']['OneSignal']["APIKey"]
+        try:
+            title = json.loads(request.data)["Title"]
+            url = json.loads(request.data)["URL"]
+        except Exception:
+            return {"message": "올바른 요청이 아님"}, 400
+        if now.weekday() >= 5:
+            return {"message": "알림미발송(주말)"}
+        meal = getData.meal(now.year, now.month, now.day, req_id, debugging)
+        if not "menu" in meal:
+            return {"message": "알림미발송(정보없음)"}
+        reqbody = {
+            "app_id": onesignal_app_id,
+            "headings": {
+                "en": title
+            },
+            "contents": {
+                "en": meal["date"] + " 급식:\n" + re.sub(r'\[[^\]]*\]', '', meal["menu"]).replace('⭐', '')
+            },
+            "url": url,
+            "included_segments": [
+                "All"
+            ]
+        }
+        reqheader = {
+            "Content-Type": "application/json",
+            "Authorization": "Basic " + onesignal_api_key
+        }
+        try:
+            requests.post("https://onesignal.com/api/v1/notifications", data=json.dumps(reqbody), headers=reqheader)
+        except Exception as error:
+            return error
+        return {"message": "성공"}
+
+
+# Fulfillment API
+class Fulfillment(Resource):
+    @staticmethod
+    @request_id
+    @auth
+    def post():
+        try:  # 요청 파싱
+            req_data: dict = json.loads(request.data)
+            uid: str = req_data['originalDetectIntentRequest']['payload']['data']['sender']['id']
+            intent: str = req_data["queryResult"]["intent"]["displayName"]
+            params: dict = req_data['queryResult']['parameters']
+            utterance: str = req_data["queryResult"]["queryText"]
+        except Exception:
+            return {"message": "Bad Request"}, 400
+        try:
+            if 'date' in params:
+                if isinstance(params['date'], str):
+                    params['date'] = datetime.datetime.strptime(req_data['queryResult']['parameters']['date'][:10],
+                                                                "%Y-%m-%d")
+                elif isinstance(params['date'], dict):  # 여러날짜는 리스트로 담음
+                    params['date'] = [datetime.datetime.strptime(req_data['queryResult']['parameters']['date']
+                                                                 ['startDate'][:10], "%Y-%m-%d"),
+                                      datetime.datetime.strptime(req_data['queryResult']['parameters']['date']
+                                                                 ['endDate'][:10], "%Y-%m-%d")]
+        except ValueError:
+            params['date'] = None
+        # 사용자 ID 변환(해싱+Prefix 붙이기)
+        enc = hashlib.sha256()
+        enc.update(uid.encode("utf-8"))
+        uid: str = 'FB-' + enc.hexdigest()
+        # 로그 남기기
+        security.log_req(uid, utterance, intent, params, req_id, "Dialogflow")
+        # 요청 수행하기
+        respns: tuple = chat.router(uid, intent, params, req_id, debugging)
+        # Fulfillment API 형식으로 변환
+        outputs = []
+        for item in respns[0]:
+            if isinstance(item, str):
+                outputs.append({"text": {"text": [item]}})
+            elif isinstance(item, dict):
+                if item['type'] == 'card':
+                    card = {"card": {
+                        "title": item['title'],
+                        "subtitle": item['body']
+                    }}
+                    if 'image' in item:
+                        card["card"]["thumbnail"] = {"imageUrl": item['image']}
+                    if 'buttons' in item:
+                        card["card"]["buttons"] = []
+                        for button in item['buttons']:
+                            if button['type'] == 'web':
+                                card["card"]["buttons"].append({
+                                    "text": button['title'],
+                                    "postback": button['url']})
+                            elif button['type'] == 'message':
+                                card["card"]["buttons"].append({
+                                    "label": button['title'],
+                                    "postback": button['title']})
+                    outputs.append(card)
+        return {"fulfillmentMessages": outputs}
+
+
+# Skill
+class Skill(Resource):
+    @staticmethod
+    @request_id
+    @auth
+    def post():
+        try:  # 요청 파싱
+            req_data: dict = json.loads(request.data)
+            uid: str = req_data["userRequest"]["user"]["id"]
+            intent: str = req_data["intent"]["name"]
+            params: dict = req_data["action"]["params"]
+            utterance: str = req_data["userRequest"]["utterance"]
+            if 'date' in params:
+                params['date'] = datetime.datetime.strptime(
+                    json.loads(req_data["action"]["params"]["date"])["date"],
+                    "%Y-%m-%d"
+                )
+            if 'date_period' in params:  # 여러날짜는 리스트로 담음
+                params['date'] = [datetime.datetime.strptime(
+                    json.loads(req_data["action"]["params"]["date_period"])["from"]["date"],
+                    "%Y-%m-%d"
+                ), datetime.datetime.strptime(
+                    json.loads(req_data["action"]["params"]["date_period"])["to"]["date"],
+                    "%Y-%m-%d"
+                )]
+                del params['date_period']
+        except Exception:
+            return {"message": "Bad Request"}, 400
+        # 사용자 ID 변환(해싱+Prefix 붙이기)
+        enc = hashlib.sha256()
+        enc.update(uid.encode("utf-8"))
+        uid: str = 'KT-' + enc.hexdigest()
+        # 로그 남기기
+        security.log_req(uid, utterance, intent, params, req_id, "Kakao i")
+        # 요청 수행하기
+        respns: tuple = chat.router(uid, intent, params, req_id, debugging)
+        # Kakao i API 형식으로 변환
+        outputs = []
+        for item in respns[0]:
+            if isinstance(item, str):
+                outputs.append({'simpleText': {'text': item}})
+            elif isinstance(item, dict):
+                if item['type'] == 'card':
+                    card = {"basicCard": {
+                        "title": item['title'],
+                        "description": item['body']
+                    }}
+                    if 'image' in item:
+                        card["basicCard"]["thumbnail"] = {"imageUrl": item['image']}
+                    if 'buttons' in item:
+                        card["basicCard"]["buttons"] = []
+                        for button in item['buttons']:
+                            if button['type'] == 'web':
+                                card["basicCard"]["buttons"].append({"action": "webLink",
+                                                                     "label": button['title'],
+                                                                     "webLinkUrl": button['url']})
+                            elif button['type'] == 'message':
+                                card["basicCard"]["buttons"].append({"action": "message",
+                                                                     "label": button['title'],
+                                                                     "messageText": button['title']})
+                    outputs.append(card)
+        return {'version': '2.0', 'template': {'outputs': outputs}}
+
+
+# 페이스북 페이지 업로드
+class FBPage(Resource):
+    @staticmethod
+    @request_id
+    @auth
+    def post():
+        return FB.publish(conf.configs['Tokens']['FBPage']['Page-Access-Token'], req_id, debugging)
+
 
 # URL Router에 맵핑.(Rest URL정의)
-api.add_resource(Date, '/date/<int:year>-<int:month>-<int:date>')
-api.add_resource(Meal, '/meal/')
-api.add_resource(MealSpecificDate, '/meal/specificdate/')
-api.add_resource(Timetable, '/tt/')
-api.add_resource(TimetableRegistered, '/tt/registered/')
-api.add_resource(ListCache, '/cache/list/')
-api.add_resource(PurgeCache, '/cache/purge/')
 api.add_resource(CacheHealthCheck, '/cache/healthcheck/')
-api.add_resource(CacheHealthCheckSkill, '/cache/healthcheck/skill/')
-api.add_resource(ManageUser, '/user/manage/')
-api.add_resource(DeleteUser, '/user/delete/')
-api.add_resource(UserSettings, '/user/settings/get-token/')
-api.add_resource(UserSettingsREST, '/user/settings/api-gateway/')
-api.add_resource(WTemp, '/wtemp/')
-api.add_resource(Cal, '/cal/')
-api.add_resource(Facebook, '/fb/')
-api.add_resource(Briefing, '/briefing/')
-api.add_resource(Commits, '/commits/')
-api.add_resource(LoL, '/lol/')
+api.add_resource(UserSettingsREST, '/user/settings/')
+api.add_resource(Fulfillment, '/fulfillment/')
+api.add_resource(Skill, '/skill/')
 api.add_resource(Notify, '/notify/')
+api.add_resource(FBPage, '/facebook/page/')
 
 # 서버 실행
 if __name__ == '__main__':

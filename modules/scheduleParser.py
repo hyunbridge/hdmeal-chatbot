@@ -10,12 +10,13 @@
 import json
 import urllib.request
 from bs4 import BeautifulSoup
-from modules import log
+from modules import log, conf
 
 
-# 학교코드와 학교종류를 정확히 입력
-school_code = "J100005775"
-school_kind = 3  # 1 유치원, 2 초등학교, 3 중학교, 4 고등학교
+# 설정 불러오기
+school_code = conf.configs['School']['NEIS']['Code']
+school_kind = conf.configs['School']['NEIS']['Kind']
+neis_baseurl = conf.configs['School']['NEIS']['BaseURL']
 
 def parse(year, month, req_id, debugging):
 
@@ -28,12 +29,12 @@ def parse(year, month, req_id, debugging):
         school_year = year
 
     try:
-        url = ("http://stu.goe.go.kr/sts_sci_sf01_001.do?"
+        url = (neis_baseurl+"sts_sci_sf01_001.do?"
                "schulCode=%s"
-               "&schulCrseScCode=%s"
-               "&schulKndScCode=%s"
-               "&ay=%s&mm=%s"
-               % (school_code, school_kind, str(school_kind).zfill(2), str(school_year).zfill(4), str(month).zfill(2)))
+               "&schulCrseScCode=%d"
+               "&schulKndScCode=%02d"
+               "&ay=%04d&mm=%02d"
+               % (school_code, school_kind, school_kind, school_year, month))
         req = urllib.request.urlopen(url)
 
     except Exception as error:

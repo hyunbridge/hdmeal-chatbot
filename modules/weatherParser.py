@@ -9,10 +9,9 @@
 
 import urllib.request
 import xml.etree.ElementTree
-from modules import log
+from modules import log, conf
 
-# 지역코드를 정확히 입력
-region = "4146351500"
+region = conf.configs['School']['KMAZone']
 
 
 def parse(req_id, debugging):

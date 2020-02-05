@@ -45,22 +45,22 @@ def meal(year, month, date, req_id, debugging):
 
 
 # 시간표정보 가져오기
-def tt(tt_grade, tt_class, year, month, date, req_id, debugging):
-    tt_weekday = datetime.date(year, month, date).weekday()
+def tt(tt_grade: int, tt_class: int, date, req_id, debugging):
+    tt_weekday = date.weekday()
 
     log.info("[#%s] tt@modules/getData.py: Started Fetching Timetable Data(%s-%s, %s-%s-%s)"
-             % (req_id, tt_grade, tt_class, year, month, date))
+             % (req_id, tt_grade, tt_class, date.year, date.month, date.day))
 
     if tt_weekday >= 5:  # 토요일, 일요일 제외
         log.info("[#%s] tt@modules/getData.py: No Timetable Data(%s-%s, %s-%s-%s)"
-                 % (req_id, tt_grade, tt_class, year, month, date))
+                 % (req_id, tt_grade, tt_class, date.year, date.month, date.day))
         return "등록된 데이터가 없습니다."
 
-    data = TTParser.parse(tt_grade, tt_class, year, month, date, req_id, debugging)
+    data = TTParser.parse(tt_grade, tt_class, date.year, date.month, date.day, req_id, debugging)
 
     if not data:
         log.info("[#%s] tt@modules/getData.py: No Timetable Data(%s-%s, %s-%s-%s)"
-                 % (req_id, tt_grade, tt_class, year, month, date))
+                 % (req_id, tt_grade, tt_class, date.year, date.month, date.day))
         return "등록된 데이터가 없습니다."
 
     def wday(tt_weekday):
@@ -83,7 +83,7 @@ def tt(tt_grade, tt_class, year, month, date, req_id, debugging):
 
     # 헤더 작성. n학년 n반, yyyy-mm-dd(요일): 형식
     header = ("%s학년 %s반,\n%s(%s):\n" % (
-        tt_grade, tt_class, datetime.date(year, month, date), wday(tt_weekday)))
+        tt_grade, tt_class, datetime.date(date.year, date.month, date.day), wday(tt_weekday)))
     if debugging:
         print(header)
 
@@ -96,7 +96,7 @@ def tt(tt_grade, tt_class, year, month, date, req_id, debugging):
             body = body + "\n%s교시: %s" % (i+1, data[i])
 
     log.info("[#%s] tt@modules/getData.py: Succeeded(%s-%s, %s-%s-%s)"
-             % (req_id, tt_grade, tt_class, year, month, date))
+             % (req_id, tt_grade, tt_class, date.year, date.month, date.day))
 
     return header + body
 
