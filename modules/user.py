@@ -105,19 +105,30 @@ def auth_admin(uid, req_id, debugging):
 # 요청 데이터 해석
 def decode_data(original_fn):
     def wrapper_fn(*args, **kwargs):
-        global req_data
-        req_data = json.loads(args[0].data)
+        global req_data, req_args
+        if args[0].data:
+            try:
+                req_data = json.loads(args[0].data)
+            except Exception:
+                return hdm_error("InvalidRequest")
+        else:
+            req_data = {}
+        req_args = args[0].args
         return original_fn(*args, **kwargs)
-
     return wrapper_fn
 
 
 # JWT 토큰 검증
 def validate_token(original_fn):
     def wrapper_fn(*args, **kwargs):
-        if req_data['token']:
-            global uid, token
+        global uid, token
+        if 'token' in req_data:
             token = req_data['token']
+        elif 'token' in req_args:
+            token = req_args['token']
+        else:
+            return hdm_error("NoToken")
+        if token:
             validation: tuple = security.validate_token(token, args[1])
             if validation[0]:
                 uid = validation[1]
@@ -125,8 +136,7 @@ def validate_token(original_fn):
             else:
                 return hdm_error(validation[1])
         else:
-            return hdm_error("NoToken")
-
+            return hdm_error("InvalidToken")
     return wrapper_fn
 
 
@@ -148,26 +158,19 @@ def validate_recaptcha(original_fn):
 
 
 # 사용자 설정 - GET
+@decode_data
+@validate_token
 def user_settings_rest_get(req, req_id, debugging):
-    # 토큰이 Query Param에 있기 때문에 해석 데코레이터 사용하지 않음
-    global req_data
-    req_data = dict()
-    req_data["token"] = req.args.get('token', None)
-
-    @validate_token
-    def inner(req_id, debugging):
-        if uid:
-            try:
-                user = get_user(uid, req_id, debugging)
-            except Exception as error:
-                log.err("[#%s] user_settings_rest_get@modules/user.py: %s" % (req_id, error))
-                return hdm_error("ServerError")
-            return {'token': token, 'classes': list(range(1, classes + 1)), 'uid': uid,
-                    'current_grade': user[0], 'current_class': user[1]}
-        else:
-            return hdm_error("InvalidToken")
-
-    return inner(req_id, debugging)
+    if uid:
+        try:
+            user = get_user(uid, req_id, debugging)
+        except Exception as error:
+            log.err("[#%s] user_settings_rest_get@modules/user.py: %s" % (req_id, error))
+            return hdm_error("ServerError")
+        return {'token': token, 'classes': list(range(1, classes + 1)), 'uid': uid,
+                'current_grade': user[0], 'current_class': user[1]}
+    else:
+        return hdm_error("InvalidToken")
 
 
 # 사용자 설정 - POST
