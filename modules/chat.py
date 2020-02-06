@@ -197,11 +197,12 @@ def schdl(params: dict, req_id: str, debugging: bool):
 # 급식봇 브리핑
 def briefing(uid: str, req_id: str, debugging: bool):
     log.info("[#%s] briefing@modules/chat.py: New Request" % req_id)
-    global briefing_header, hd_err, briefing_schdl, briefing_weather, briefing_meal, briefing_tt
+    global briefing_header, hd_err, briefing_schdl, briefing_weather, briefing_meal, briefing_meal_ga, briefing_tt
     briefing_header = "일시적인 서버 오류로 헤더를 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
     briefing_schdl = "일시적인 서버 오류로 학사일정을 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
     briefing_weather = "일시적인 서버 오류로 날씨를 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
     briefing_meal = "일시적인 서버 오류로 식단을 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
+    briefing_meal_ga = "일시적인 서버 오류로 식단을 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
     briefing_tt = "일시적인 서버 오류로 시간표를 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
 
     if datetime.datetime.now().time() >= datetime.time(11):  # 11시 이후이면
@@ -261,12 +262,19 @@ def briefing(uid: str, req_id: str, debugging: bool):
     # 급식
     @logging_time
     def f_meal():
-        global briefing_meal
+        global briefing_meal, briefing_meal_ga
         briefing_meal = meal({'date': date}, req_id, debugging)[0][0]
         if "급식을 실시하지 않습니다." in briefing_meal:
             log.info("[#%s] briefing@modules/chat.py: No Meal" % req_id)
+            briefing_meal_ga = date_ko + "은 급식을 실시하지 않습니다."
             briefing_meal = "%s은 %s" % (date_ko, briefing_meal)
         elif "열량" in briefing_meal:
+            briefing_meal_ga = "%s 급식은 %s 입니다." % (
+                date_ko, re.sub(r'\[[^\]]*\]', '',
+                                # 헤더, 줄바꿈 제거하고 반점 뒤 띄어쓰기
+                                briefing_meal[16:].replace('\n', '').replace(',', ', ')
+                                # 맛있는 메뉴 표시, 마침표 제거하기
+                                .replace('⭐', '').split('.')[0]))
             briefing_meal = "%s 급식:\n%s" % (date_ko, briefing_meal[16:].replace('\n\n', '\n'))  # 헤더부분 제거, 줄바꿈 2번 → 1번
 
     # 시간표
@@ -307,15 +315,18 @@ def briefing(uid: str, req_id: str, debugging: bool):
     # 전 쓰레드 종료 시까지 기다리기
     th_header.join()
     if hd_err:
-        return [hd_err], None
+        return [hd_err], None, '안녕하세요, 흥덕고 급식봇입니다.\n' + hd_err
     th_cal.join()
     th_weather.join()
     th_meal.join()
     th_tt.join()
 
+    # 구글어시스턴트 응답
+    ga_respns = '안녕하세요, 흥덕고 급식봇입니다.\n' + briefing_meal_ga
+
     # 응답 만들기
     return ["%s\n\n%s" % (briefing_header, briefing_schdl), briefing_weather,
-            "%s\n\n%s" % (briefing_meal, briefing_tt)], None
+            "%s\n\n%s" % (briefing_meal, briefing_tt)], None, ga_respns
 
 
 def lol(params, req_id, debugging):
