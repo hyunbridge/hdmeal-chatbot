@@ -53,15 +53,19 @@ def auth(original_fn):
             log.info("[#%s] Bypassing Authorization")
             return original_fn(*args, **kwargs)
         else:
+            # 요청 헤더 또는 쿼리 파라미터에서 토큰 가져오기
             if "X-HDMeal-Token" in request.headers:
-                if security.auth(request.headers["X-HDMeal-Token"], req_id):
-                    return original_fn(*args, **kwargs)
-                else:
-                    return {'version': '2.0', 'data': {'msg': "미승인 토큰"}}, 403
+                token = request.headers["X-HDMeal-Token"]
+            elif request.args.get('token'):
+                token = request.args.get('token')
             else:
                 log.info('[#%s] Failed to Authorize(No Token)' % req_id)
                 return {'version': '2.0', 'data': {'msg': "인증 토큰 없음"}}, 401
-
+            # 토큰 일치여부 확인
+            if security.auth(token, req_id):
+                return original_fn(*args, **kwargs)
+            else:
+                return {'version': '2.0', 'data': {'msg': "미승인 토큰"}}, 403
     return wrapper_fn
 
 
