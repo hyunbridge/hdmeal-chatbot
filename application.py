@@ -12,7 +12,7 @@ import hashlib
 import json
 import re
 import requests
-from flask import Flask
+from flask import Flask, make_response
 from flask_restful import request, Api, Resource
 from modules import conf
 
@@ -302,6 +302,14 @@ class FBPage(Resource):
     def post():
         return FB.publish(conf.configs['Tokens']['FBPage']['Page-Access-Token'], req_id, debugging)
 
+# LoaderIO 지원
+class LoaderIO(Resource):
+    @staticmethod
+    def get(loaderio_token):
+        if 'LoaderIO' in conf.configs['Misc']:
+            if conf.configs['Misc']['LoaderIO'] == loaderio_token:
+                return make_response('loaderio-' + loaderio_token)
+        return make_response('Page Not Found', 404)
 
 # URL Router에 맵핑.(Rest URL정의)
 api.add_resource(CacheHealthCheck, '/cache/healthcheck/')
@@ -310,6 +318,7 @@ api.add_resource(Fulfillment, '/fulfillment/')
 api.add_resource(Skill, '/skill/')
 api.add_resource(Notify, '/notify/')
 api.add_resource(FBPage, '/facebook/page/')
+api.add_resource(LoaderIO, '/loaderio-<string:loaderio_token>.html')
 
 # 서버 실행
 if __name__ == '__main__':
