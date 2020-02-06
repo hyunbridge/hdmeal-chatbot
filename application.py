@@ -66,6 +66,7 @@ def auth(original_fn):
                 return original_fn(*args, **kwargs)
             else:
                 return {'version': '2.0', 'data': {'msg': "미승인 토큰"}}, 403
+
     return wrapper_fn
 
 
@@ -176,12 +177,19 @@ class Fulfillment(Resource):
     def post():
         try:  # 요청 파싱
             req_data: dict = json.loads(request.data)
-            uid: str = req_data['originalDetectIntentRequest']['payload']['data']['sender']['id']
             intent: str = req_data["queryResult"]["intent"]["displayName"]
             params: dict = req_data['queryResult']['parameters']
             utterance: str = req_data["queryResult"]["queryText"]
         except Exception:
             return {"message": "Bad Request"}, 400
+        try:  # 사용자 ID는 따로 파싱함
+            uid: str = req_data['originalDetectIntentRequest']['payload']['data']['sender']['id']
+            # 사용자 ID 변환(해싱+Prefix 붙이기)
+            enc = hashlib.sha256()
+            enc.update(uid.encode("utf-8"))
+            uid: str = 'FB-' + enc.hexdigest()
+        except KeyError:  # 사용자 ID 없을경우 익명처리
+            uid: str = "ANON-" + req_id
         try:
             if 'date' in params:
                 if isinstance(params['date'], str):
@@ -194,10 +202,6 @@ class Fulfillment(Resource):
                                                                  ['endDate'][:10], "%Y-%m-%d")]
         except ValueError:
             params['date'] = None
-        # 사용자 ID 변환(해싱+Prefix 붙이기)
-        enc = hashlib.sha256()
-        enc.update(uid.encode("utf-8"))
-        uid: str = 'FB-' + enc.hexdigest()
         # 로그 남기기
         security.log_req(uid, utterance, intent, params, req_id, "Dialogflow")
         # 요청 수행하기
@@ -227,6 +231,20 @@ class Fulfillment(Resource):
                                     "label": button['title'],
                                     "postback": button['title']})
                     outputs.append(card)
+        try:
+            ga_respns = respns[2]
+            outputs.append({
+                "platform": "ACTIONS_ON_GOOGLE",
+                "simpleResponses": {
+                    "simpleResponses": [
+                        {
+                            "textToSpeech": ga_respns
+                        }
+                    ]
+                }
+            })
+        except IndexError:
+            pass
         return {"fulfillmentMessages": outputs}
 
 
@@ -302,6 +320,7 @@ class FBPage(Resource):
     def post():
         return FB.publish(conf.configs['Tokens']['FBPage']['Page-Access-Token'], req_id, debugging)
 
+
 # LoaderIO 지원
 class LoaderIO(Resource):
     @staticmethod
@@ -310,6 +329,7 @@ class LoaderIO(Resource):
             if conf.configs['Misc']['LoaderIO'] == loaderio_token:
                 return make_response('loaderio-' + loaderio_token)
         return make_response('Page Not Found', 404)
+
 
 # URL Router에 맵핑.(Rest URL정의)
 api.add_resource(CacheHealthCheck, '/cache/healthcheck/')
