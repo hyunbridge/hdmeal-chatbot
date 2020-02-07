@@ -19,8 +19,9 @@ from modules import log, conf
 # 디버깅용
 summoner_name_for_debug = "Hide on Bush"
 
-api_baseurl = "https://kr.api.riotgames.com/"
+api_baseurl = conf.configs['Misc']['LoL']['APIBaseURL']
 api_key = conf.configs['Tokens']['Riot']
+ddragon_version = conf.configs['Misc']['LoL']['DataDragonVersion']
 
 
 # Riot Games API 사용
@@ -92,8 +93,8 @@ def parse(summoner_name, req_id, debugging):
     data["summoner"] = {
         "name": summoner_data["name"],  # 소환사명
         "level": summoner_data["summonerLevel"],  # 소환사 레벨
-        "profileIcon": ("https://avatar.leagueoflegends.com/KR/%s.png"
-                        % urllib.parse.quote(summoner_data["name"])),  # 프로필 아이콘
+        "profileIcon": ("https://ddragon.leagueoflegends.com/cdn/%s/img/profileicon/%s.png"
+                        % (ddragon_version, summoner_data["profileIconId"])),  # 프로필 아이콘
         "OPGG": "https://www.op.gg/summoner/userName=" + urllib.parse.quote(summoner_name)  # OP.GG 링크
     }
 

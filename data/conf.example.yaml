@@ -66,6 +66,10 @@ Misc:
   SettingsURL: https://example.com/
   # LoaderIO 인증
   LoaderIO:
+  # 롤
+  LoL:
+    APIBaseURL: https://kr.api.riotgames.com/
+    DataDragonVersion: 10.3.1
   # 오류 메세지, 응답코드
   Errors:
     ServerError:
