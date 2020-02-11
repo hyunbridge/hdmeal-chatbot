@@ -154,6 +154,10 @@ class ManageUsageData(Resource):
         else:
             return response, 200, cors_headers
 
+    @staticmethod
+    def options():
+        return None, 200, cors_headers
+
 
 # 푸시 알림 보내기
 class Notify(Resource):
