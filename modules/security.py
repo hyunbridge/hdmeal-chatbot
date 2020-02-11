@@ -26,11 +26,17 @@ jwt = JsonWebToken(['ES512'])
 # JWT 토큰 검증
 claim_options = {
             "iss": {
+                "essential": True,
+                "values": ["HDMeal-UserSettings"]
+            },
+            "uid": {
                 "essential": True
             },
-            "iat": {
-                "essential": True,
-                "validate": JWTClaims.validate_iat
+            "scope": {
+                "essential": True
+            },
+            "request_id": {
+                "essential": True
             },
             "nbf": {
                 "essential": True,
@@ -39,9 +45,6 @@ claim_options = {
             "exp": {
                 "essential": True,
                 "validate": JWTClaims.validate_exp,
-            },
-            "uid": {
-                "essential": True
             }
         }
 
@@ -59,7 +62,7 @@ def log_req(uid: str, utterance: str, intent: str, params: dict, req_id: str, pl
     })
 
 # JWT 토큰 생성
-def generate_token(uid: str, req_id: str):
+def generate_token(issuer: str, uid: str, scope: list, req_id: str):
     log.info("[#%s] generate_token@modules/security.py: Token Generated" % req_id)
     now = datetime.datetime.utcnow()
     return jwt.encode(
@@ -68,11 +71,12 @@ def generate_token(uid: str, req_id: str):
             'typ': 'JWT'
         },
         {
-            'iss': 'HDMeal (Req #%s)' % req_id,
-            'iat': now,
+            'iss': 'HDMeal-' + issuer,
+            'uid': uid,
+            'scope': scope,
+            'request_id': req_id,
             'nbf': now,
-            'exp': now + datetime.timedelta(seconds=600),
-            'uid': uid
+            'exp': now + datetime.timedelta(seconds=600)
         },
         conf.privkey).decode("UTF-8")
 
@@ -88,7 +92,7 @@ def validate_token(token: str, req_id: str):
         log.info("[#%s] validate_token@modules/security.py: Invalid Token" % req_id)
         return False, "InvalidToken"
     log.info("[#%s] validate_token@modules/security.py: Valid Token (ISS %s)" % (req_id, decoded['iss']))
-    return True, decoded['uid']
+    return True, decoded['uid'], decoded['scope']
 
 # 리캡챠 토큰 검증
 def validate_recaptcha(token: str, req_id: str):

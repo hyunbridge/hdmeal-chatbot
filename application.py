@@ -132,6 +132,26 @@ class UserSettingsREST(Resource):
     def options():
         return None, 200, cors_headers
 
+# 사용 데이터 관리
+class ManageUsageData(Resource):
+    @staticmethod
+    @request_id
+    def get():
+        response = user.get_usage_data(request, req_id, debugging)
+        if isinstance(response, tuple):
+            return response + ({"X-HDMeal-Req-ID": req_id},)
+        else:
+            return response, 200, {"X-HDMeal-Req-ID": req_id}
+
+    @staticmethod
+    @request_id
+    def delete():
+        response = user.delete_usage_data(request, req_id, debugging)
+        if isinstance(response, tuple):
+            return response + ({"X-HDMeal-Req-ID": req_id},)
+        else:
+            return response, 200, {"X-HDMeal-Req-ID": req_id}
+
 
 # 푸시 알림 보내기
 class Notify(Resource):
@@ -345,6 +365,7 @@ class LoaderIO(Resource):
 # URL Router에 맵핑.(Rest URL정의)
 api.add_resource(CacheHealthCheck, '/cache/healthcheck/')
 api.add_resource(UserSettingsREST, '/user/settings/')
+api.add_resource(ManageUsageData, '/user/usage-data/')
 api.add_resource(Fulfillment, '/fulfillment/')
 api.add_resource(Skill, '/skill/')
 api.add_resource(Notify, '/notify/')

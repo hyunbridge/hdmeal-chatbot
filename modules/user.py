@@ -15,6 +15,7 @@ from modules import log, conf, security
 connection = pymongo.MongoClient(conf.configs['DataBase']['ConnectString'])
 db = connection.hdmeal
 users_collection = db.users
+utterances_collection = db.utterances
 # 학급수 불러오기
 classes = int(conf.configs['School']['Classes'])
 # 오류 메세지
@@ -121,7 +122,7 @@ def decode_data(original_fn):
 # JWT 토큰 검증
 def validate_token(original_fn):
     def wrapper_fn(*args, **kwargs):
-        global uid, token
+        global uid, token, scope
         if 'token' in req_data:
             token = req_data['token']
         elif 'token' in req_args:
@@ -132,6 +133,7 @@ def validate_token(original_fn):
             validation: tuple = security.validate_token(token, args[1])
             if validation[0]:
                 uid = validation[1]
+                scope = validation[2]
                 return original_fn(*args, **kwargs)
             else:
                 return hdm_error(validation[1])
@@ -143,9 +145,15 @@ def validate_token(original_fn):
 # 리캡챠 토큰 검증
 def validate_recaptcha(original_fn):
     def wrapper_fn(*args, **kwargs):
-        global token, decoded
+        global token
         if 'recaptcha' in req_data:
-            validation: tuple = security.validate_recaptcha(req_data['recaptcha'], args[1])
+            recaptcha = req_data['recaptcha']
+        elif 'recaptcha' in req_args:
+            recaptcha = req_args['recaptcha']
+        else:
+            return hdm_error("NoRecaptchaToken")
+        if recaptcha:
+            validation: tuple = security.validate_recaptcha(recaptcha, args[1])
             if validation[0]:
                 return original_fn(*args, **kwargs)
             else:
@@ -161,7 +169,7 @@ def validate_recaptcha(original_fn):
 @decode_data
 @validate_token
 def user_settings_rest_get(req, req_id, debugging):
-    if uid:
+    if uid and 'GetUserInfo' in scope:
         try:
             user = get_user(uid, req_id, debugging)
         except Exception as error:
@@ -172,14 +180,13 @@ def user_settings_rest_get(req, req_id, debugging):
     else:
         return hdm_error("InvalidToken")
 
-
 # 사용자 설정 - POST
 @decode_data
 @validate_recaptcha
 @validate_token
 def user_settings_rest_post(req, req_id, debugging):
-    if not uid:
-        return hdm_error("InvalidRequest")
+    if not uid or not 'ManageUserInfo' in scope:
+        return hdm_error("InvalidToken")
     if "user_grade" in req_data and "user_class" in req_data:
         user_grade = int(req_data["user_grade"])
         user_class = int(req_data["user_class"])
@@ -195,14 +202,13 @@ def user_settings_rest_post(req, req_id, debugging):
     else:
         return hdm_error("InvalidRequest")
 
-
 # 사용자 설정 - DELETE
 @decode_data
 @validate_recaptcha
 @validate_token
 def user_settings_rest_delete(req, req_id, debugging):
-    if not uid:
-        return hdm_error("InvalidRequest")
+    if not uid or not 'ManageUserInfo' in scope:
+        return hdm_error("InvalidToken")
     try:
         delete_user(uid, req_id, debugging)
     except Exception as error:
@@ -210,6 +216,36 @@ def user_settings_rest_delete(req, req_id, debugging):
         return hdm_error("ServerError")
     return {'message': "삭제했습니다."}
 
+
+# 사용 데이터 관리 - GET
+@decode_data
+@validate_recaptcha
+@validate_token
+def get_usage_data(req, req_id, debugging):
+    if uid and 'GetUsageData' in scope:
+        db_find_usage_data = list(utterances_collection.find({"User ID": uid}, {"_id": 0}).limit(3001))
+        if len(db_find_usage_data) > 3000:
+            return hdm_error("TooManyResult")
+        return_list = []
+        for i in db_find_usage_data:
+            i['Date'] = str(i['Date'])
+            return_list.append(i)
+        if not return_list:
+            return {'message': "데이터가 없습니다."}
+        return return_list
+    else:
+        return hdm_error("InvalidToken")
+
+# 사용 데이터 관리 - DELETE
+@decode_data
+@validate_recaptcha
+@validate_token
+def delete_usage_data(req, req_id, debugging):
+    if uid and 'DeleteUsageData' in scope:
+        utterances_collection.remove({"User ID": uid})
+        return {'message': "삭제했습니다."}
+    else:
+        return hdm_error("InvalidToken")
 
 # 디버그
 if __name__ == "__main__":
