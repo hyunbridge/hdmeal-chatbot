@@ -449,7 +449,7 @@ def user_settings(uid: str, req_id: str):
             {
                 "type": "web",
                 "title": "내 정보 관리",
-                "url": url + "?token=" + security.generate_token(uid, req_id)
+                "url": url + "?token=" + security.generate_token('UserSettings', uid, ['GetUserInfo', 'ManageUserInfo', 'GetUsageData', 'DeleteUsageData'], req_id)
             }
         ]
     }], None
