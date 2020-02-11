@@ -71,7 +71,7 @@ def auth(original_fn):
 
 
 # Flask 인스턴스 생성
-app = Flask(__name__, static_folder='./data/static')
+app = Flask(__name__, static_folder='./data/static', template_folder='./data/templates')
 api = Api(app)
 log.info("Server Started")
 
@@ -82,7 +82,11 @@ class CacheHealthCheck(Resource):
     @request_id
     @auth
     def get():
-        return cache.health_check(req_id, debugging)
+        response = cache.health_check(req_id, debugging)
+        if isinstance(response, tuple):
+            return response + ({"X-HDMeal-Req-ID": req_id},)
+        else:
+            return response, 200, {"X-HDMeal-Req-ID": req_id}
 
 
 # 내 정보 관리(API)
@@ -97,29 +101,32 @@ class UserSettingsREST(Resource):
     @staticmethod
     @request_id
     def get():
+        cors_headers["X-HDMeal-Req-ID"] = req_id
         response = user.user_settings_rest_get(request, req_id, debugging)
         if isinstance(response, tuple):
             return response + (cors_headers,)
         else:
-            return (response, 200, cors_headers)
+            return response, 200, cors_headers
 
     @staticmethod
     @request_id
     def post():
+        cors_headers["X-HDMeal-Req-ID"] = req_id
         response = user.user_settings_rest_post(request, req_id, debugging)
         if isinstance(response, tuple):
             return response + (cors_headers,)
         else:
-            return (response, 200, cors_headers)
+            return response, 200, cors_headers
 
     @staticmethod
     @request_id
     def delete():
+        cors_headers["X-HDMeal-Req-ID"] = req_id
         response = user.user_settings_rest_delete(request, req_id, debugging)
         if isinstance(response, tuple):
             return response + (cors_headers,)
         else:
-            return (response, 200, cors_headers)
+            return response, 200, cors_headers
 
     @staticmethod
     def options():
@@ -139,12 +146,12 @@ class Notify(Resource):
             title = json.loads(request.data)["Title"]
             url = json.loads(request.data)["URL"]
         except Exception:
-            return {"message": "올바른 요청이 아님"}, 400
+            return {"message": "올바른 요청이 아님"}, 400, {"X-HDMeal-Req-ID": req_id}
         if now.weekday() >= 5:
-            return {"message": "알림미발송(주말)"}
+            return {"message": "알림미발송(주말)"}, 200, {"X-HDMeal-Req-ID": req_id}
         meal = getData.meal(now.year, now.month, now.day, req_id, debugging)
         if not "menu" in meal:
-            return {"message": "알림미발송(정보없음)"}
+            return {"message": "알림미발송(정보없음)"}, 200, {"X-HDMeal-Req-ID": req_id}
         reqbody = {
             "app_id": onesignal_app_id,
             "headings": {
@@ -164,9 +171,9 @@ class Notify(Resource):
         }
         try:
             requests.post("https://onesignal.com/api/v1/notifications", data=json.dumps(reqbody), headers=reqheader)
-        except Exception as error:
-            return error
-        return {"message": "성공"}
+        except Exception:
+            return {"message": "발송실패"}, 500, {"X-HDMeal-Req-ID": req_id}
+        return {"message": "성공"}, 200, {"X-HDMeal-Req-ID": req_id}
 
 
 # Fulfillment API
@@ -181,7 +188,7 @@ class Fulfillment(Resource):
             params: dict = req_data['queryResult']['parameters']
             utterance: str = req_data["queryResult"]["queryText"]
         except Exception:
-            return {"message": "Bad Request"}, 400
+            return {"message": "Bad Request"}, 400, {"X-HDMeal-Req-ID": req_id}
         try:  # 사용자 ID는 따로 파싱함
             uid: str = req_data['originalDetectIntentRequest']['payload']['data']['sender']['id']
             # 사용자 ID 변환(해싱+Prefix 붙이기)
@@ -245,7 +252,7 @@ class Fulfillment(Resource):
             })
         except IndexError:
             pass
-        return {"fulfillmentMessages": outputs}
+        return {"fulfillmentMessages": outputs}, 200, {"X-HDMeal-Req-ID": req_id}
 
 
 # Skill
@@ -275,7 +282,7 @@ class Skill(Resource):
                 )]
                 del params['date_period']
         except Exception:
-            return {"message": "Bad Request"}, 400
+            return {"message": "Bad Request"}, 400, {"X-HDMeal-Req-ID": req_id}
         # 사용자 ID 변환(해싱+Prefix 붙이기)
         enc = hashlib.sha256()
         enc.update(uid.encode("utf-8"))
@@ -309,7 +316,7 @@ class Skill(Resource):
                                                                      "label": button['title'],
                                                                      "messageText": button['title']})
                     outputs.append(card)
-        return {'version': '2.0', 'template': {'outputs': outputs}}
+        return {'version': '2.0', 'template': {'outputs': outputs}}, 200, {"X-HDMeal-Req-ID": req_id}
 
 
 # 페이스북 페이지 업로드
@@ -318,7 +325,11 @@ class FBPage(Resource):
     @request_id
     @auth
     def post():
-        return FB.publish(conf.configs['Tokens']['FBPage']['Page-Access-Token'], req_id, debugging)
+        response = FB.publish(conf.configs['Tokens']['FBPage']['Page-Access-Token'], req_id, debugging)
+        if isinstance(response, tuple):
+            return response + ({"X-HDMeal-Req-ID": req_id},)
+        else:
+            return response, 200, {"X-HDMeal-Req-ID": req_id}
 
 
 # LoaderIO 지원
