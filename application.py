@@ -137,20 +137,22 @@ class ManageUsageData(Resource):
     @staticmethod
     @request_id
     def get():
+        cors_headers["X-HDMeal-Req-ID"] = req_id
         response = user.get_usage_data(request, req_id, debugging)
         if isinstance(response, tuple):
-            return response + ({"X-HDMeal-Req-ID": req_id},)
+            return response + (cors_headers,)
         else:
-            return response, 200, {"X-HDMeal-Req-ID": req_id}
+            return response, 200, cors_headers
 
     @staticmethod
     @request_id
     def delete():
+        cors_headers["X-HDMeal-Req-ID"] = req_id
         response = user.delete_usage_data(request, req_id, debugging)
         if isinstance(response, tuple):
-            return response + ({"X-HDMeal-Req-ID": req_id},)
+            return response + (cors_headers,)
         else:
-            return response, 200, {"X-HDMeal-Req-ID": req_id}
+            return response, 200, cors_headers
 
 
 # 푸시 알림 보내기
