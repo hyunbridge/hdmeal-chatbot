@@ -96,3 +96,6 @@ Misc:
     RecaptchaTokenValidationError:
       - 올바르지 않은 리캡챠 토큰입니다.
       - 400
+    TooManyResult:
+      - 결과값이 너무 많습니다.
+      - 400
