@@ -13,8 +13,7 @@ import authlib.jose.errors as JWTErrors
 import pymongo
 import requests
 from authlib.jose import JsonWebToken, JWTClaims
-from numpy import base_repr
-from modules import conf, log
+from modules import conf, log, base58
 
 # DB정보 불러오기
 connection = pymongo.MongoClient(conf.configs['DataBase']['ConnectString'])
@@ -111,9 +110,17 @@ def validate_recaptcha(token: str, req_id: str):
 
 # 요청 ID 생성
 def generate_req_id():
-    rand = str(random.randint(1, 99999)).zfill(5)  # 5자리 난수 생성
-    tmstm = str(int(datetime.datetime.utcnow().timestamp()))  # 타임스탬프 생성
-    return base_repr(int(rand + tmstm), base=36).zfill(10)  # 난수 + 타임스탬프 합치고 Base36 변환, 10자리 채우기
+    # 요청 ID는 {난수+유닉스 타임스탬프*100}(17자리)+타임스탬프 위치(1자리)+체크섬(3자리)로, 총 21자리로 이루어져 있음
+    # 체크섬은 체크섬을 제외한 요청ID(총 18자리)를 997로 나눈 나머지가 됨
+    # 사용자 편의를 위해, 58진법으로 변환되어 보여짐
+    tmstm = str(int(datetime.datetime.utcnow().timestamp() * 100))  # 타임스탬프 생성(0.01초 단위)
+    rand = str(random.randint(1, 9))  # 첫자리가 0이 되지 않도록 첫자리는 미리 만들어줌
+    for i in range(16 - len(tmstm)):  # 랜덤문자열과 타임스탬프를 이어붙여 17자리가 되도록 길이조정
+        rand = rand + str(random.randint(0, 9))
+    tmstm_loc = str(len(rand))  # 타임스탬프만 추출해낼 수 있도록 타임스탬프 위치 기록
+    chksum = str(int(rand + tmstm + tmstm_loc) % 997).zfill(3)  # 3자리 체크섬 만들기
+    req_id = int(rand + tmstm + tmstm_loc + chksum)  # 모두 이어붙여 요청 ID 만들기
+    return base58.encode(req_id).zfill(12)  # Base58 변환, 12자리 채우기
 
 # 토큰 인증
 def auth(token: str, req_id: str):
