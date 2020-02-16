@@ -439,7 +439,7 @@ def lol(params, req_id, debugging):
 
 
 def user_settings(uid: str, req_id: str):
-    url = conf.configs['Misc']['SettingsURL']
+    url = conf.configs['Misc']['Settings']['BaseURL']
     return [{
         "type": "card",
         "title": "내 정보 관리",

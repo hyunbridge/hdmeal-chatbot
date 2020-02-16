@@ -91,8 +91,8 @@ class CacheHealthCheck(Resource):
 
 # 내 정보 관리(API)
 cors_headers = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "application/json,Content-Type,Content-Length,Access-Control-Allow-Origin,Access-Control-Allow-Headers,Server,Date",
+    "Access-Control-Allow-Origin": conf.configs['Misc']['Settings']['Access-Control-Allow-Origin'],
+    "Access-Control-Allow-Headers": "Content-Type,Access-Control-Allow-Origin,Access-Control-Allow-Headers",
     "Access-Control-Allow-Methods": "GET, POST, DELETE"
 }
 
