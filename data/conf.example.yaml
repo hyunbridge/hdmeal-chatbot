@@ -41,10 +41,6 @@ Tokens:
   # 페이스북 페이지
   FBPage:
     Page-Access-Token: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-  # 페이스북 메신저
-  FBMessenger:
-    Page-Access-Token: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    Verify-Token: Super-Strong-Verify-Token
   # OneSignal
   OneSignal:
     AppID: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -62,8 +58,10 @@ Admins:
 
 # 기타 잡다한 설정들
 Misc:
-  # 설정페이지 URL
-  SettingsURL: https://example.com/
+  # 설정
+  Settings:
+    BaseURL: https://example.com/
+    Access-Control-Allow-Origin: *
   # LoaderIO 인증
   LoaderIO:
   # 롤
