@@ -22,7 +22,7 @@ utterances_collection = db.utterances
 # 토큰 불러오기
 tokens: dict = conf.configs['Tokens']['HDM']
 # 사용할 JWT 알고리즘
-jwt = JsonWebToken(['ES512'])
+jwt = JsonWebToken(['HS256'])
 # JWT 토큰 검증
 claim_options = {
             "iss": {
@@ -35,7 +35,7 @@ claim_options = {
             "scope": {
                 "essential": True
             },
-            "request_id": {
+            "reqId": {
                 "essential": True
             },
             "nbf": {
@@ -67,23 +67,23 @@ def generate_token(issuer: str, uid: str, scope: list, req_id: str):
     now = datetime.datetime.utcnow()
     return jwt.encode(
         {
-            'alg': 'ES512',
+            'alg': 'HS256',
             'typ': 'JWT'
         },
         {
             'iss': 'HDMeal-' + issuer,
             'uid': uid,
             'scope': scope,
-            'request_id': req_id,
+            'reqId': req_id,
             'nbf': now,
             'exp': now + datetime.timedelta(seconds=600)
         },
-        conf.privkey).decode("UTF-8")
+        conf.configs['Misc']['Settings']['Secret']).decode("UTF-8")
 
 # JWT 토큰 검증
 def validate_token(token: str, req_id: str):
     try:
-        decoded = jwt.decode(token, conf.pubkey.encode('UTF-8'), claims_options=claim_options)
+        decoded = jwt.decode(token, conf.configs['Misc']['Settings']['Secret'], claims_options=claim_options)
         decoded.validate()
     except JWTErrors.ExpiredTokenError:
         log.info("[#%s] validate_token@modules/security.py: Expired Token" % req_id)
