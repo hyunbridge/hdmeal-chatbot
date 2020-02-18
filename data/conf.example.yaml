@@ -61,7 +61,7 @@ Misc:
   # 설정
   Settings:
     BaseURL: https://example.com/
-    Access-Control-Allow-Origin: *
+    Access-Control-Allow-Origin: "*"
   # LoaderIO 인증
   LoaderIO:
   # 롤
