@@ -10,8 +10,6 @@
 import yaml
 
 configs = None
-pubkey = None
-privkey = None
 
 
 def load():

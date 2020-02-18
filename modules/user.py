@@ -7,7 +7,10 @@
 # Copyright 2019, Hyungyo Seo
 # modules/user.py - 사용자 관리 및 인증을 담당하는 스크립트입니다.
 
+import base64
 import json
+import zipfile
+from io import BytesIO
 import pymongo
 from modules import log, conf, security
 
@@ -219,12 +222,12 @@ def user_settings_rest_delete(req, req_id, debugging):
 
 # 사용 데이터 관리 - GET
 @decode_data
-@validate_recaptcha
+
 @validate_token
 def get_usage_data(req, req_id, debugging):
     if uid and 'GetUsageData' in scope:
-        db_find_usage_data = list(utterances_collection.find({"User ID": uid}, {"_id": 0}).limit(3001))
-        if len(db_find_usage_data) > 3000:
+        db_find_usage_data = list(utterances_collection.find({"User ID": uid}, {"_id": 0}).limit(10001))
+        if len(db_find_usage_data) > 10000:
             return hdm_error("TooManyResult")
         return_list = []
         for i in db_find_usage_data:
@@ -232,7 +235,13 @@ def get_usage_data(req, req_id, debugging):
             return_list.append(i)
         if not return_list:
             return {'message': "데이터가 없습니다."}
-        return return_list
+        return_json = json.dumps(return_list, indent=4, ensure_ascii=False)
+        in_memory = BytesIO()
+        return_zip = zipfile.ZipFile(in_memory, 'w', zipfile.ZIP_DEFLATED)
+        return_zip.comment = uid.encode()
+        return_zip.writestr("UsageData.json", return_json)
+        return_zip.close()
+        return {'file': 'data:application/zip;base64,'+base64.b64encode(in_memory.getvalue()).decode('unicode-escape')}
     else:
         return hdm_error("InvalidToken")
 
