@@ -18,7 +18,3 @@ def load():
     global configs, pubkey, privkey
     with open('data/conf.yaml', 'r', encoding="utf-8") as config_file:
         configs = yaml.load(config_file, Loader=yaml.SafeLoader)
-    with open("data/keys/public.pem", 'r', encoding="utf-8") as pubkey_file:
-        pubkey = pubkey_file.read()
-    with open("data/keys/private.pem", 'r', encoding="utf-8") as privkey_file:
-        privkey = privkey_file.read()
