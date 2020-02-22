@@ -169,10 +169,18 @@ class Notify(Resource):
         onesignal_app_id = conf.configs['Tokens']['OneSignal']['AppID']
         onesignal_api_key = conf.configs['Tokens']['OneSignal']["APIKey"]
         try:
-            title = json.loads(request.data)["Title"]
-            url = json.loads(request.data)["URL"]
-        except Exception:
-            return {"message": "올바른 요청이 아님"}, 400, {"X-HDMeal-Req-ID": req_id}
+            req_data: dict = request.json
+            title = req_data["Title"]
+            url = req_data["URL"]
+        except KeyError as key:
+            return {"message": "Missing Value: %s Required" % key}, 400, {"X-HDMeal-Req-ID": req_id}
+        except TypeError:
+            return {"message": "Request Body is Not JSON Format"}, 400, {"X-HDMeal-Req-ID": req_id}
+        except Exception as e:
+            if 'Failed to decode JSON object' in str(e):
+                return {"message": "Malformed JSON in request body"}, 400, {"X-HDMeal-Req-ID": req_id}
+            else:
+                return {"message": "Bad Request"}, 400, {"X-HDMeal-Req-ID": req_id}
         if now.weekday() >= 5:
             return {"message": "알림미발송(주말)"}, 200, {"X-HDMeal-Req-ID": req_id}
         meal = getData.meal(now.year, now.month, now.day, req_id, debugging)
@@ -209,12 +217,19 @@ class Fulfillment(Resource):
     @auth
     def post():
         try:  # 요청 파싱
-            req_data: dict = json.loads(request.data)
+            req_data: dict = request.json
             intent: str = req_data["queryResult"]["intent"]["displayName"]
             params: dict = req_data['queryResult']['parameters']
             utterance: str = req_data["queryResult"]["queryText"]
-        except Exception:
-            return {"message": "Bad Request"}, 400, {"X-HDMeal-Req-ID": req_id}
+        except KeyError as key:
+            return {"message": "Missing Value: %s Required" % key}, 400, {"X-HDMeal-Req-ID": req_id}
+        except TypeError:
+            return {"message": "Request Body is Not JSON Format"}, 400, {"X-HDMeal-Req-ID": req_id}
+        except Exception as e:
+            if 'Failed to decode JSON object' in str(e):
+                return {"message": "Malformed JSON in request body"}, 400, {"X-HDMeal-Req-ID": req_id}
+            else:
+                return {"message": "Bad Request"}, 400, {"X-HDMeal-Req-ID": req_id}
         try:  # 사용자 ID는 따로 파싱함
             uid: str = req_data['originalDetectIntentRequest']['payload']['data']['sender']['id']
             # 사용자 ID 변환(해싱+Prefix 붙이기)
@@ -288,7 +303,7 @@ class Skill(Resource):
     @auth
     def post():
         try:  # 요청 파싱
-            req_data: dict = json.loads(request.data)
+            req_data: dict = request.json
             uid: str = req_data["userRequest"]["user"]["id"]
             intent: str = req_data["intent"]["name"]
             params: dict = req_data["action"]["params"]
@@ -307,8 +322,15 @@ class Skill(Resource):
                     "%Y-%m-%d"
                 )]
                 del params['date_period']
-        except Exception:
-            return {"message": "Bad Request"}, 400, {"X-HDMeal-Req-ID": req_id}
+        except KeyError as key:
+            return {"message": "Missing Value: %s Required" % key}, 400, {"X-HDMeal-Req-ID": req_id}
+        except TypeError:
+            return {"message": "Request Body is Not JSON Format"}, 400, {"X-HDMeal-Req-ID": req_id}
+        except Exception as e:
+            if 'Failed to decode JSON object' in str(e):
+                return {"message": "Malformed JSON in request body"}, 400, {"X-HDMeal-Req-ID": req_id}
+            else:
+                return {"message": "Bad Request"}, 400, {"X-HDMeal-Req-ID": req_id}
         # 사용자 ID 변환(해싱+Prefix 붙이기)
         enc = hashlib.sha256()
         enc.update(uid.encode("utf-8"))
@@ -387,4 +409,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if "test_id" in args:
         test_id = args.test_id
-    app.run(debug=debugging)
+    app.run(debug=debugging, threaded=True)
