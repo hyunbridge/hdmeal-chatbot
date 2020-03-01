@@ -48,9 +48,7 @@ Tokens:
 
 # 데이터베이스
 DataBase:
-  Server: localhost
-  Username: User
-  Password: P@ssw0rd!
+  ConnectString: mongodb://UserName:SuperStrongPassword@mongodb.example.com:27017/hdmeal
 
 # 관리자 UID (SHA256 해시처리)
 Admins:
@@ -60,10 +58,11 @@ Admins:
 Misc:
   # 설정
   Settings:
+    Secret: SuperSecret
     BaseURL: https://example.com/
     Access-Control-Allow-Origin: "*"
   # LoaderIO 인증
-  LoaderIO:
+  LoaderIO: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
   # 롤
   LoL:
     APIBaseURL: https://kr.api.riotgames.com/
