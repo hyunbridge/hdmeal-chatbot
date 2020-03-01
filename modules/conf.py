@@ -10,9 +10,12 @@
 import yaml
 
 configs = None
+delicious = []
 
 
 def load():
-    global configs, pubkey, privkey
+    global configs, delicious
     with open('data/conf.yaml', 'r', encoding="utf-8") as config_file:
         configs = yaml.load(config_file, Loader=yaml.SafeLoader)
+    with open('data/delicious.txt', 'r', encoding="utf-8") as delicious_file:
+        delicious = list(map(lambda x: x.strip(), delicious_file.readlines()))  # 개행문자 제거
