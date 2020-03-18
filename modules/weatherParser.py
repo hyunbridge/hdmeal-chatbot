@@ -5,7 +5,7 @@
 # ██║  ██║██████╔╝██║ ╚═╝ ██║███████╗██║  ██║███████╗
 # ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
 # Copyright 2019-2020, Hyungyo Seo
-# modules/weatherParser.py - 컴시간 서버에 접속하여 시간표정보를 파싱해오는 스크립트입니다.
+# modules/weatherParser.py - 날씨정보를 파싱해오는 스크립트입니다.
 
 import urllib.request
 import xml.etree.ElementTree

@@ -89,5 +89,7 @@ ENV/
 .ropeproject
 
 .idea/
-bak/
 .vs/
+.vscode/
+
+bak/
