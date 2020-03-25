@@ -12,21 +12,13 @@ import base64
 import datetime
 import json
 import os
+import re
 import urllib.parse as urlparse
 import urllib.request
 from modules import log, conf
 
 # API URL 입력
-api_url = "http://comci.kr:4082/168790"
-search_api_prefix = "36401l"
-timetable_api_prefix = "83746"
-
-# 자료들의 위치 입력
-daily_timetable = "자료2129"  # 일일시간표
-original_timetable = "자료5106"  # 원본시간표
-teachers_list = "자료7158"  # 교사명단
-subjects_list = "자료9191"  # 과목명
-start_date = "시작일"  # 시작일
+base_url = "http://comci.kr:4082/"
 
 # 기타 옵션 입력
 headers = {
@@ -51,10 +43,70 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
     def fetch():
         global part_code, data_1, data_2
 
+        # school_ra, sc_data, 자료위치 알아내기
+        try:
+            init_req = urllib.request.Request(base_url + 'st', data=None, headers=headers)
+            init_respns = urllib.request.urlopen(init_req).read().decode('EUC-KR')
+
+            # school_ra
+            school_ra_pattern = re.compile("url:'.?(.*?)'")
+            school_ra_matches = school_ra_pattern.findall(init_respns)
+            if isinstance(school_ra_matches, list):
+                school_ra = school_ra_matches[0][1:]
+                school_ra_code = school_ra.split('?')[0]
+            else:
+                raise BaseException
+
+            # sc_data
+            sc_data_pattern = re.compile("sc_data\('[0-9].*?\);")
+            sc_data_matches = sc_data_pattern.findall(init_respns)
+            if isinstance(sc_data_matches, list):
+                sc_data = sc_data_matches[0].split("'")[1]
+            else:
+                raise BaseException
+
+            # 일일시간표
+            daily_timetable_pattern = re.compile("일일자료=자료.*?\[")
+            daily_timetable_matches = daily_timetable_pattern.findall(init_respns)
+            if isinstance(daily_timetable_matches, list):
+                daily_timetable = daily_timetable_matches[0].split('자료.')[1][:-1]
+            else:
+                raise BaseException
+
+            # 원본시간표
+            original_timetable_pattern = re.compile("원자료=자료.*?\[")
+            original_timetable_matches = original_timetable_pattern.findall(init_respns)
+            if isinstance(original_timetable_matches, list):
+                original_timetable = original_timetable_matches[0].split('자료.')[1][:-1]
+            else:
+                raise BaseException
+
+            # 교사명
+            teachers_list_pattern = re.compile("성명=자료.*?\[th")
+            teachers_list_matches = teachers_list_pattern.findall(init_respns)
+            if isinstance(teachers_list_matches, list):
+                teachers_list = teachers_list_matches[0].split('자료.')[1][:-3]
+            else:
+                raise BaseException
+
+            # 과목명
+            subjects_list_pattern = re.compile('"\'>"\+자료.*?\[sb')
+            subjects_list_matches = subjects_list_pattern.findall(init_respns)
+            if isinstance(subjects_list_matches, list):
+                subjects_list = subjects_list_matches[0].split('자료.')[1][:-3]
+            else:
+                raise BaseException
+        except Exception as error:
+            if debugging:
+                print(error)
+            log.err("[#%s] fetch.parse@modules/TTParser.py: Failed to Parse Timetable(%s-%s, %s)" % (
+                req_id, tt_grade, tt_class, tt_date))
+            return error
+
         # 학교명으로 검색해 학교코드 알아내기
         try:
             search_req = urllib.request.Request(
-                api_url + '?'+ search_api_prefix + urlparse.quote(school_name.encode("EUC-KR")),
+                base_url + school_ra + urlparse.quote(school_name.encode("EUC-KR")),
                 data=None, headers=headers
             )
 
@@ -80,14 +132,14 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
         # 이번 주 시간표와 다음 주 시간표 가져오기
         try:
             fetch_req_1 = urllib.request.Request(
-                api_url + '?' + base64.b64encode(bytes("%s_%s_0_1" % (timetable_api_prefix, part_code), 'utf-8')).decode(
-                    "utf-8"),
+                base_url + school_ra_code + '?' + base64.b64encode(bytes(sc_data + str(part_code) + "_0_1", 'utf-8'))
+                .decode("utf-8"),
                 data=None, headers=headers
             )
 
             fetch_req_2 = urllib.request.Request(
-                api_url + '?' + base64.b64encode(bytes("%s_%s_0_2" % (timetable_api_prefix, part_code), 'utf-8')).decode(
-                    "utf-8"),
+                base_url + school_ra_code + '?' + base64.b64encode(bytes(sc_data + str(part_code) + "_0_2", 'utf-8'))
+                .decode("utf-8"),
                 data=None, headers=headers
             )
 
@@ -122,7 +174,7 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
             json_cache["2"]["originalTimetable"] = data_2[original_timetable]
             json_cache["2"]["teachersList"] = data_2[teachers_list]
             json_cache["2"]["subjectsList"] = data_2[subjects_list]
-            json_cache["2"]["startDate"] = data_2[start_date]
+            json_cache["2"]["startDate"] = data_2["시작일"]
             json.dump(json_cache, make_file, ensure_ascii=False)
             print("File Created")
 
