@@ -189,7 +189,7 @@ def wtemp(req_id, debugging):
         if not temp.isalpha():  # 무효값 걸러냄(값이 유효할 경우에만 캐싱)
             with open('data/cache/wtemp.json', 'w',
                       encoding="utf-8") as make_file:  # 캐시 만들기
-                json.dump({"timestamp": int(date.timestamp()), "temp": temp}, make_file, ensure_ascii=False, indent="\t")
+                json.dump({"timestamp": int(date.timestamp()), "temp": temp}, make_file, ensure_ascii=False)
                 print("File Created")
                 temp = temp + "°C"
         log.info("[#%s] wtemp@modules/getData.py: Succeeded" % req_id)
@@ -258,7 +258,7 @@ def weather(date_ko, req_id, debugging):
 
         with open('data/cache/weather.json', 'w',
                   encoding="utf-8") as make_file:  # 캐시 만들기
-            json.dump(weather_data, make_file, ensure_ascii=False, indent="\t")
+            json.dump(weather_data, make_file, ensure_ascii=False)
             print("File Created")
 
         log.info("[#%s] weather@modules/getData.py: Succeeded" % req_id)

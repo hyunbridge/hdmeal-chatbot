@@ -65,7 +65,7 @@ def parse(year, month, req_id, debugging):
     if calendar:
         with open('data/cache/Cal-%s-%s.json' % (year, month), 'w',
                   encoding="utf-8") as make_file:
-            json.dump(calendar, make_file, ensure_ascii=False, indent="\t")
+            json.dump(calendar, make_file, ensure_ascii=False)
             print("File Created")
 
     log.info("[#%s] parse@modules/scheduleParser.py: Succeeded(%s-%s)" % (req_id, year, month))

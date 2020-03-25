@@ -118,7 +118,7 @@ def parse(year, month, day, req_id, debugging):
 
     with open('data/cache/' + date[:10] + '.json', 'w',
               encoding="utf-8") as make_file:
-        json.dump(return_data, make_file, ensure_ascii=False, indent="\t")
+        json.dump(return_data, make_file, ensure_ascii=False)
         print("File Created")
 
     log.info("[#%s] parse@modules/mealParser.py: Succeeded(%s-%s-%s)" % (req_id, year, month, day))
