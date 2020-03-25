@@ -154,29 +154,33 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
             return error
 
         # JSON 파싱
-        data_1 = json.loads(url_1)
-        data_2 = json.loads(url_2)
+        data_1_raw = json.loads(url_1)
+        data_2_raw = json.loads(url_2)
 
         timestamp = int(datetime.datetime.now().timestamp())  # 타임스탬프 생성
 
         # 캐시 만들기
+        json_cache = dict()
+        json_cache["1"] = dict()
+        json_cache["2"] = dict()
+        json_cache["Timestamp"] = timestamp
+        # 필요한 자료들만 선별해서 캐싱하기
+        json_cache["1"]["dailyTimetable"] = data_1_raw[daily_timetable]
+        json_cache["1"]["originalTimetable"] = data_1_raw[original_timetable]
+        json_cache["1"]["teachersList"] = data_1_raw[teachers_list]
+        json_cache["1"]["subjectsList"] = data_1_raw[subjects_list]
+        json_cache["2"]["dailyTimetable"] = data_2_raw[daily_timetable]
+        json_cache["2"]["originalTimetable"] = data_2_raw[original_timetable]
+        json_cache["2"]["teachersList"] = data_2_raw[teachers_list]
+        json_cache["2"]["subjectsList"] = data_2_raw[subjects_list]
+        json_cache["2"]["startDate"] = data_2_raw["시작일"]
         with open('data/cache/TT.json', 'w', encoding="utf-8") as make_file:
-            json_cache = dict()
-            json_cache["1"] = dict()
-            json_cache["2"] = dict()
-            json_cache["Timestamp"] = timestamp
-            # 필요한 자료들만 선별해서 캐싱하기
-            json_cache["1"]["dailyTimetable"] = data_1[daily_timetable]
-            json_cache["1"]["originalTimetable"] = data_1[original_timetable]
-            json_cache["1"]["teachersList"] = data_1[teachers_list]
-            json_cache["1"]["subjectsList"] = data_1[subjects_list]
-            json_cache["2"]["dailyTimetable"] = data_2[daily_timetable]
-            json_cache["2"]["originalTimetable"] = data_2[original_timetable]
-            json_cache["2"]["teachersList"] = data_2[teachers_list]
-            json_cache["2"]["subjectsList"] = data_2[subjects_list]
-            json_cache["2"]["startDate"] = data_2["시작일"]
             json.dump(json_cache, make_file, ensure_ascii=False)
             print("File Created")
+
+        # 이후 파서에서 이용할 수 있도록 data 정의
+        data_1 = json_cache["1"]
+        data_2 = json_cache["2"]
 
     if os.path.isfile('data/cache/TT.json'):  # 캐시 있으면
         try:
