@@ -16,6 +16,22 @@ import urllib.parse as urlparse
 import urllib.request
 from modules import log, conf
 
+# API URL 입력
+api_url = "http://comci.kr:4082/168790"
+search_api_prefix = "36401l"
+timetable_api_prefix = "83746"
+
+# 자료들의 위치 입력
+daily_timetable = "자료2129"  # 일일시간표
+original_timetable = "자료5106"  # 원본시간표
+teachers_list = "자료7158"  # 교사명단
+subjects_list = "자료9191"  # 과목명
+start_date = "시작일"  # 시작일
+
+# 기타 옵션 입력
+headers = {
+    'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36"
+}
 
 school_region = conf.configs['School']['Region']
 school_name = conf.configs['School']['Name']
@@ -38,12 +54,8 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
         # 학교명으로 검색해 학교코드 알아내기
         try:
             search_req = urllib.request.Request(
-                'http://comci.kr:4081/98372?92744l%s' % urlparse.quote(school_name.encode("EUC-KR")),
-                data=None,
-                headers={
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
-                                  'Chrome/78.0.3904.70 Safari/537.36'
-                }
+                api_url + '?'+ search_api_prefix + urlparse.quote(school_name.encode("EUC-KR")),
+                data=None, headers=headers
             )
 
             search_url = urllib.request.urlopen(search_req)
@@ -68,23 +80,15 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
         # 이번 주 시간표와 다음 주 시간표 가져오기
         try:
             fetch_req_1 = urllib.request.Request(
-                'http://comci.kr:4081/98372?' + base64.b64encode(bytes("34739_%s_0_1" % part_code, 'utf-8')).decode(
+                api_url + '?' + base64.b64encode(bytes("%s_%s_0_1" % (timetable_api_prefix, part_code), 'utf-8')).decode(
                     "utf-8"),
-                data=None,
-                headers={
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
-                                  'Chrome/78.0.3904.70 Safari/537.36'
-                }
+                data=None, headers=headers
             )
 
             fetch_req_2 = urllib.request.Request(
-                'http://comci.kr:4081/98372?' + base64.b64encode(bytes("34739_%s_0_2" % part_code, 'utf-8')).decode(
+                api_url + '?' + base64.b64encode(bytes("%s_%s_0_2" % (timetable_api_prefix, part_code), 'utf-8')).decode(
                     "utf-8"),
-                data=None,
-                headers={
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
-                                  'Chrome/78.0.3904.70 Safari/537.36'
-                }
+                data=None, headers=headers
             )
 
             # 시간표 디코딩
@@ -109,17 +113,17 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
             json_cache["1"] = dict()
             json_cache["2"] = dict()
             json_cache["Timestamp"] = timestamp
-            # 필요한 자료들만 선별에서 캐싱하기
-            json_cache["1"]["자료14"] = data_1["자료14"]
-            json_cache["1"]["자료81"] = data_1["자료81"]
-            json_cache["1"]["자료46"] = data_1["자료46"]
-            json_cache["1"]["자료92"] = data_1["자료92"]
-            json_cache["2"]["자료14"] = data_2["자료14"]
-            json_cache["2"]["자료81"] = data_2["자료81"]
-            json_cache["2"]["자료46"] = data_2["자료46"]
-            json_cache["2"]["자료92"] = data_2["자료92"]
-            json_cache["2"]["시작일"] = data_2["시작일"]
-            json.dump(json_cache, make_file, ensure_ascii=False, indent="\t")
+            # 필요한 자료들만 선별해서 캐싱하기
+            json_cache["1"]["dailyTimetable"] = data_1[daily_timetable]
+            json_cache["1"]["originalTimetable"] = data_1[original_timetable]
+            json_cache["1"]["teachersList"] = data_1[teachers_list]
+            json_cache["1"]["subjectsList"] = data_1[subjects_list]
+            json_cache["2"]["dailyTimetable"] = data_2[daily_timetable]
+            json_cache["2"]["originalTimetable"] = data_2[original_timetable]
+            json_cache["2"]["teachersList"] = data_2[teachers_list]
+            json_cache["2"]["subjectsList"] = data_2[subjects_list]
+            json_cache["2"]["startDate"] = data_2[start_date]
+            json.dump(json_cache, make_file, ensure_ascii=False)
             print("File Created")
 
     if os.path.isfile('data/cache/TT.json'):  # 캐시 있으면
@@ -149,7 +153,7 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
         fetch()  # 파싱
 
     # 날짜비교 기준일(2번째 자료의 시작일) 파싱
-    data_2_date = data_2["시작일"].split("-")
+    data_2_date = data_2["startDate"].split("-")
     data_2_date = datetime.date(int(data_2_date[0]), int(data_2_date[1]), int(data_2_date[2]))
 
     # 기준일이 조회일보다 미래이고, 날짜차이가 7일 이내일 때, 첫 번째 자료 선택
@@ -161,10 +165,10 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
     else:
         return None
 
-    tt = data["자료14"][tt_grade][tt_class]  # 자료14에 각 반의 일일시간표 정보가 담겨있음
-    og_tt = data["자료81"][tt_grade][tt_class]  # 자료81에 각 반의 원본시간표 정보가 담겨있음
-    teacher_list = data["자료46"]  # 교사명단
-    subject_list = data["자료92"]  # 2글자로 축약한 과목명단 - 전체 명칭은 긴자료92에 담겨있음
+    tt = data["dailyTimetable"][tt_grade][tt_class]  # 일일시간표
+    og_tt = data["originalTimetable"][tt_grade][tt_class]  # 원본시간표
+    teacher_list = data["teachersList"]  # 교사명단
+    subject_list = data["subjectsList"]  # 2글자로 축약한 과목명단
 
     # 파이썬의 weekday는 월요일부터 시작하지만
     # 컴시간의 weekday는 일요일부터 시작한다

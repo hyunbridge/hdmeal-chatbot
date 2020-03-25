@@ -100,7 +100,7 @@ cors_headers = {
 
 
 class UserSettingsREST(Resource):
-    decorators = [limiter.limit('120/day;30/hour;10/minute;1/second')]
+    decorators = [limiter.limit('120/day;30/hour;10/minute;3/second')]
     @staticmethod
     @request_id
     def get():
@@ -137,7 +137,7 @@ class UserSettingsREST(Resource):
 
 # 사용 데이터 관리
 class ManageUsageData(Resource):
-    decorators = [limiter.limit('60/day;15/hour;5/minute;1/second')]
+    decorators = [limiter.limit('80/day;20/hour;7/minute;3/second')]
     @staticmethod
     @request_id
     def get():
