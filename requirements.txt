@@ -16,7 +16,7 @@ idna==2.8
 itsdangerous==1.1.0
 Jinja2==2.10.1
 MarkupSafe==1.1.1
-Pillow==6.2.0
+Pillow==7.1.0
 PyJWT==1.4.2
 pytz==2019.1
 requests==2.22.0
