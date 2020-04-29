@@ -190,8 +190,7 @@ def user_settings_rest_get(req, req_id, debugging):
         except Exception as error:
             log.err("[#%s] user_settings_rest_get@modules/user.py: %s" % (req_id, error))
             return hdm_error("ServerError")
-        return {'token': token, 'classes': list(range(1, classes + 1)), 'uid': uid,
-                'current_grade': user[0], 'current_class': user[1]}
+        return {'classes': list(range(1, classes + 1)), 'current_grade': user[0], 'current_class': user[1]}
     else:
         return hdm_error("InvalidToken")
 

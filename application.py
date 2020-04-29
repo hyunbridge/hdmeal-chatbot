@@ -13,8 +13,6 @@ import json
 import re
 import requests
 from flask import Flask, make_response
-from flask_limiter import Limiter
-from flask_limiter.util import get_ipaddr
 from flask_restful import request, Api, Resource
 from modules import conf
 conf.load()
@@ -74,7 +72,7 @@ def auth(original_fn):
 # Flask 인스턴스 생성
 app = Flask(__name__)
 api = Api(app)
-limiter = Limiter(app, key_func=get_ipaddr)
+# limiter = Limiter(app, key_func=get_ipaddr)
 log.info("Server Started")
 
 
@@ -100,7 +98,7 @@ cors_headers = {
 
 
 class UserSettingsREST(Resource):
-    decorators = [limiter.limit('120/day;30/hour;10/minute;3/second')]
+    # decorators = [limiter.limit('120/day;30/hour;10/minute;3/second')]
     @staticmethod
     @request_id
     def get():
@@ -137,7 +135,7 @@ class UserSettingsREST(Resource):
 
 # 사용 데이터 관리
 class ManageUsageData(Resource):
-    decorators = [limiter.limit('80/day;20/hour;7/minute;3/second')]
+    # decorators = [limiter.limit('80/day;20/hour;7/minute;3/second')]
     @staticmethod
     @request_id
     def get():
