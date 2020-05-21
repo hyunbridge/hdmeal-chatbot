@@ -10,6 +10,7 @@
 import html
 import json
 import re
+import urllib.error
 import urllib.request
 from collections import OrderedDict
 from bs4 import BeautifulSoup
@@ -35,12 +36,11 @@ def parse(year, month, day, req_id, debugging):
                                      "&schulKndScCode=%02d"
                                      "&schMmealScCode=2"
                                      "&schYmd=%s.%s.%s" % (school_code, school_kind, school_kind,
-                                                           year, month, day))
-    except Exception as error:
-        log.err("[#%s] parse@modules/mealParser.py: Failed to Parse Menu(%s-%s-%s)" % (req_id, year, month, day))
-        if debugging:
-            print(error)
-        return error
+                                                           year, month, day), timeout=2)
+    except (urllib.error.HTTPError, urllib.error.URLError) as e:
+        log.err("[#%s] parse@modules/mealParser.py: Failed to Parse Menu(%s-%s-%s) because %s" % (
+            req_id, year, month, day, e))
+        raise ConnectionError
     data = BeautifulSoup(url, 'html.parser')
     data = data.find_all("tr")
 
