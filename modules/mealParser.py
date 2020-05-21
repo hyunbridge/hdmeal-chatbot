@@ -103,7 +103,7 @@ def parse(year, month, day, req_id, debugging):
     meal = meal[1:]  # 맨 처음 줄바꿈 제거
 
     # 칼로리 파싱
-    kcal = data[45].find_all("td")
+    kcal = data[51].find_all("td")
     kcal = kcal[loc].get_text().strip()
     if debugging:
         print(kcal)
