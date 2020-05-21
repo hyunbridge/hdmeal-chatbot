@@ -8,6 +8,7 @@
 # modules/WTempParser.py - 실시간수질정보시스템 서버에 접속하여 수온정보를 파싱해오는 스크립트입니다.
 
 import datetime
+import urllib.error
 import urllib.request
 from bs4 import BeautifulSoup
 from modules import log
@@ -16,12 +17,10 @@ from modules import log
 def get(req_id, debugging):
     log.info("[#%s] get@modules/WTempParser.py: Started Parsing Water Temperature" % req_id)
     try:
-        url = urllib.request.urlopen("http://koreawqi.go.kr/wQSCHomeLayout_D.wq?action_type=T")
-    except Exception as error:
-        if debugging:
-            print(error)
-        log.err("[#%s] get@modules/WTempParser.py: Failed" % req_id)
-        return error
+        url = urllib.request.urlopen("http://koreawqi.go.kr/wQSCHomeLayout_D.wq?action_type=T", timeout=2)
+    except (urllib.error.HTTPError, urllib.error.URLError) as e:
+        log.err("[#%s] get@modules/WTempParser.py: Failed to Parse Water Temperature because %s" % (req_id, e))
+        raise ConnectionError
     data = BeautifulSoup(url, 'html.parser')
     # 측정일시 파싱
     date = data.find('span', class_='data').get_text().split('"')[1]

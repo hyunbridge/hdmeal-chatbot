@@ -91,11 +91,22 @@ def health_check(req_id, debugging):
                     time_left = int((datetime.timedelta(hours=3) - (datetime.datetime.now() - timestamp)).seconds / 60)
                     status_tt = "Vaild (Up to %s Min(s))" % time_left
                 else:
-                    TTParser.parse(1, 1, now.year, now.month, now.day, req_id, debugging)
-                    status_tt = "Expired (But Now Created)"
+                    try:
+                        TTParser.parse(1, 1, now.year, now.month, now.day, req_id, debugging)
+                        status_tt = "Expired (Regenerated)"
+                    except Exception as e:
+                        log.err(
+                            "[#%s] health_check@modules/cache.py: Failed to Regenerate Cache(Timetable) because %s" %
+                            (req_id, e))
+                        status_tt = "Expired (Failed)"
         else:
-            TTParser.parse(1, 1, now.year, now.month, now.day, req_id, debugging)
-            status_tt = "NotFound (But Now Created)"
+            try:
+                TTParser.parse(1, 1, now.year, now.month, now.day, req_id, debugging)
+                status_tt = "NotFound (Regenerated)"
+            except Exception as e:
+                log.err("[#%s] health_check@modules/cache.py: Failed to Regenerate Cache(Timetable) because %s" %
+                        (req_id, e))
+                status_tt = "NotFound (Failed)"
 
     # 한강 수온 캐시 만료기한 조회
     def check_wtemp():
@@ -108,11 +119,23 @@ def health_check(req_id, debugging):
                         (datetime.timedelta(minutes=76) - (datetime.datetime.now() - timestamp)).seconds / 60)
                     status_wtemp = "Vaild (Up to %s Min(s))" % time_left
                 else:
-                    getData.wtemp(req_id, debugging)
-                    status_wtemp = "Expired (But Now Created)"
+                    try:
+                        getData.wtemp(req_id, debugging)
+                        status_wtemp = "Expired (Regenerated)"
+                    except Exception as e:
+                        log.err(
+                            "[#%s] health_check@modules/cache.py: Failed to Regenerate Cache(WTemp) because %s" %
+                            (req_id, e))
+                        status_wtemp = "Expired (Failed)"
         else:
-            getData.wtemp(req_id, debugging)
-            status_wtemp = "NotFound (But Now Created)"
+            try:
+                getData.wtemp(req_id, debugging)
+                status_wtemp = "NotFound (Regenerated)"
+            except Exception as e:
+                log.err(
+                    "[#%s] health_check@modules/cache.py: Failed to Regenerate Cache(WTemp) because %s" %
+                    (req_id, e))
+                status_wtemp = "NotFound (Failed)"
 
     # 날씨 캐시 만료기한 조회
     def check_weather():
@@ -124,11 +147,23 @@ def health_check(req_id, debugging):
                     time_left = int((datetime.timedelta(hours=1) - (datetime.datetime.now() - timestamp)).seconds / 60)
                     status_weather = "Vaild (Up to %s Min(s))" % time_left
                 else:
-                    getData.weather(None, req_id, debugging)
-                    status_weather = "Expired (But Now Created)"
+                    try:
+                        getData.weather(None, req_id, debugging)
+                        status_weather = "Expired (Regenerated)"
+                    except Exception as e:
+                        log.err(
+                            "[#%s] health_check@modules/cache.py: Failed to Regenerate Cache(Weather) because %s" %
+                            (req_id, e))
+                        status_weather = "Expired (Failed)"
         else:
-            getData.weather(None, req_id, debugging)
-            status_weather = "NotFound (But Now Created)"
+            try:
+                getData.weather(None, req_id, debugging)
+                status_weather = "NotFound (Regenerated)"
+            except Exception as e:
+                log.err(
+                    "[#%s] health_check@modules/cache.py: Failed to Regenerate Cache(Weather) because %s" %
+                    (req_id, e))
+                status_weather = "NotFound (Failed)"
 
     # 쓰레드 정의
     th_tt = Thread(target=check_tt)

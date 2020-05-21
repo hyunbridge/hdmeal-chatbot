@@ -8,6 +8,7 @@
 # modules/scheduleParser.py - NEIS 서버에 접속하여 학사일정을 파싱해오는 스크립트입니다.
 
 import json
+import urllib.error
 import urllib.request
 from bs4 import BeautifulSoup
 from modules import log, conf
@@ -35,12 +36,11 @@ def parse(year, month, req_id, debugging):
                "&schulKndScCode=%02d"
                "&ay=%04d&mm=%02d"
                % (school_code, school_kind, school_kind, school_year, month))
-        req = urllib.request.urlopen(url)
-
-    except Exception as error:
-        if debugging:
-            print(error)
-        return error
+        req = urllib.request.urlopen(url, timeout=2)
+    except (urllib.error.HTTPError, urllib.error.URLError) as e:
+        log.err("[#%s] parse@modules/scheduleParser.py: Failed to Parse Schedule(%s-%s) because %s" % (
+            req_id, year, month, e))
+        raise ConnectionError
 
     if debugging:
         print(url)

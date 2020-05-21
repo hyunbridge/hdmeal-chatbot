@@ -183,8 +183,10 @@ def wtemp(req_id, debugging):
             parser = WTempParser.get(req_id, debugging)
             date = parser[0]
             temp = parser[1]
-        except Exception:
-            log.err("[#%s] wtemp@modules/getData.py: Failed to Fetch Water Temperature Data" % req_id)
+        except ConnectionError:
+            return "한강 수온 서버에 연결하지 못했습니다.\n요청 ID: " + req_id
+        except Exception as e:
+            log.err("[#%s] wtemp@modules/getData.py: Failed to Fetch Water Temperature Data because %s" % (req_id, e))
             return "측정소 또는 서버 오류입니다."
         if not temp.isalpha():  # 무효값 걸러냄(값이 유효할 경우에만 캐싱)
             with open('data/cache/wtemp.json', 'w',
@@ -220,8 +222,8 @@ def wtemp(req_id, debugging):
         log.info("[#%s] temp@modules/getData.py: No Cache" % req_id)
         parser_response = parse()  # 파싱
 
-    if parser_response == "측정소 또는 서버 오류입니다.":
-        return "측정소 또는 서버 오류입니다."
+    if isinstance(parser_response, str):
+        return parser_response
     time = date.hour
     # 24시간제 -> 12시간제 변환
     if time == 0 or time == 24:  # 자정

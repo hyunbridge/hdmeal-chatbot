@@ -44,18 +44,18 @@ def parse(summoner_name, req_id, debugging):
             data=None, headers=header
         )
 
-        summoner_data = json.load(urllib.request.urlopen(summoner_req))
+        summoner_data = json.load(urllib.request.urlopen(summoner_req, timeout=2))
         summoner_id = summoner_data["id"]
         account_id = summoner_data["accountId"]
-    except Exception as error:
-        if "404" in str(error):
+    except Exception as e:
+        if "404" in str(e):
             return None
-        if "401" in str(error) or "403" in str(error):
+        if "401" in str(e) or "403" in str(e):
             return "Invalid Token"
         if debugging:
-            print(error)
-        log.err("[#%s] parse@modules/LoL.py: Failed to Parse Summoner Data" % req_id)
-        return error
+            print(e)
+        log.err("[#%s] parse@modules/LoL.py: Failed to Parse Summoner Data because %s" % (req_id, e))
+        raise e
 
     # 소환사의 리그정보 가져오기
     try:
@@ -64,12 +64,12 @@ def parse(summoner_name, req_id, debugging):
             data=None, headers=header
         )
 
-        league_data = json.load(urllib.request.urlopen(league_req))
-    except Exception as error:
+        league_data = json.load(urllib.request.urlopen(league_req, timeout=2))
+    except Exception as e:
         if debugging:
-            print(error)
-        log.err("[#%s] parse@modules/LoL.py: Failed to Parse League Data" % req_id)
-        return error
+            print(e)
+        log.err("[#%s] parse@modules/LoL.py: Failed to Parse League Data because %s" % (req_id, e))
+        raise e
 
     # 소환사의 경기전적 가져오기
     try:
@@ -78,15 +78,15 @@ def parse(summoner_name, req_id, debugging):
             data=None, headers=header
         )
 
-        match_data = json.load(urllib.request.urlopen(match_req))
-    except Exception as error:
-        if "404" in str(error):
+        match_data = json.load(urllib.request.urlopen(match_req, timeout=2))
+    except Exception as e:
+        if "404" in str(e):
             match_data = None
         else:
             if debugging:
-                print(error)
-            log.err("[#%s] parse@modules/LoL.py: Failed to Parse Match Data" % req_id)
-            return error
+                print(e)
+            log.err("[#%s] parse@modules/LoL.py: Failed to Parse Match Data because %s" % (req_id, e))
+            raise e
 
     # 소환사 정보 딕셔너리로 만들기
     data = dict()

@@ -13,8 +13,10 @@ import datetime
 import json
 import os
 import re
+import urllib.error
 import urllib.parse as urlparse
 import urllib.request
+
 from modules import log, conf
 
 # 컴시간알리미 웹사이트 URL
@@ -45,7 +47,7 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
         try:
             # BaseURL 알아내기
             baseurl_req = urllib.request.Request(url, data=None, headers=headers)
-            baseurl_respns = urllib.request.urlopen(baseurl_req).read().decode('EUC-KR')
+            baseurl_respns = urllib.request.urlopen(baseurl_req, timeout=2).read().decode('EUC-KR')
             baseurl_pattern = re.compile("src='.*?/st'")
             baseurl_matches = baseurl_pattern.findall(baseurl_respns)
             if baseurl_matches:
@@ -55,7 +57,7 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
 
             # school_ra, sc_data, 자료위치 알아내기
             init_req = urllib.request.Request(base_url + 'st', data=None, headers=headers)
-            init_respns = urllib.request.urlopen(init_req).read().decode('EUC-KR')
+            init_respns = urllib.request.urlopen(init_req, timeout=2).read().decode('EUC-KR')
             # school_ra
             school_ra_pattern = re.compile("url:'.?(.*?)'")
             school_ra_matches = school_ra_pattern.findall(init_respns)
@@ -106,7 +108,7 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
                 data=None, headers=headers
             )
 
-            search_url = urllib.request.urlopen(search_req)
+            search_url = urllib.request.urlopen(search_req, timeout=2)
 
             # 학교 검색결과 가져오기
             school_list = ast.literal_eval(search_url.read().decode('utf-8').replace('\x00', ''))["학교검색"]
@@ -135,8 +137,8 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
             )
 
             # 시간표 디코딩
-            url_1 = urllib.request.urlopen(fetch_req_1).read().decode('utf-8').replace('\x00', '')
-            url_2 = urllib.request.urlopen(fetch_req_2).read().decode('utf-8').replace('\x00', '')
+            url_1 = urllib.request.urlopen(fetch_req_1, timeout=2).read().decode('utf-8').replace('\x00', '')
+            url_2 = urllib.request.urlopen(fetch_req_2, timeout=2).read().decode('utf-8').replace('\x00', '')
 
             # JSON 파싱
             data_1_raw = json.loads(url_1)
@@ -166,12 +168,10 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
             # 이후 파서에서 이용할 수 있도록 data 정의
             data_1 = json_cache["1"]
             data_2 = json_cache["2"]
-        except Exception as e:
-            if debugging:
-                print(e)
-            log.err("[#%s] fetch.parse@modules/TTParser.py: Failed to Parse Timetable(%s-%s, %s)" % (
-                req_id, tt_grade, tt_class, tt_date))
-            return False
+        except (urllib.error.HTTPError, urllib.error.URLError) as e:
+            log.err("[#%s] fetch.parse@modules/TTParser.py: Failed to Parse Timetable(%s-%s, %s) because %s" % (
+                req_id, tt_grade, tt_class, tt_date, e))
+            raise ConnectionError
 
     if os.path.isfile('data/cache/TT.json'):  # 캐시 있으면
         try:

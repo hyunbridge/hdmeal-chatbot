@@ -7,6 +7,7 @@
 # Copyright 2019-2020, Hyungyo Seo
 # modules/weatherParser.py - 날씨정보를 파싱해오는 스크립트입니다.
 
+import urllib.error
 import urllib.request
 import xml.etree.ElementTree
 from modules import log, conf
@@ -20,7 +21,10 @@ def parse(req_id, debugging):
 
     try:
         url = urllib.request.urlopen("https://www.kma.go.kr/wid/queryDFSRSS.jsp"
-                                     "?zone=%s" % region)
+                                     "?zone=%s" % region, timeout=2)
+    except (urllib.error.HTTPError, urllib.error.URLError) as e:
+        log.err("[#%s] parse@modules/weatherParser.py: Failed to Parse Weather because %s" % (req_id, e))
+        raise ConnectionError
     except Exception as error:
         if debugging:
             print(error)
