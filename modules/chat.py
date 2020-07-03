@@ -219,7 +219,7 @@ def briefing(uid: str, req_id: str, debugging: bool):
     briefing_meal_ga = "알 수 없는 오류로 식단을 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
     briefing_tt = "알 수 없는 오류로 시간표를 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
 
-    if datetime.datetime.now().time() >= datetime.time(11):  # 11시 이후이면
+    if datetime.datetime.now().time() >= datetime.time(17):  # 오후 5시 이후이면
         # 내일을 기준일로 설정
         date = datetime.datetime.now() + datetime.timedelta(days=1)
         date_ko = "내일"
