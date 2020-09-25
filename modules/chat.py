@@ -287,7 +287,7 @@ def briefing(uid: str, req_id: str, debugging: bool):
             meal = getData.meal(date.year, date.month, date.day, req_id, debugging)
             if not "message" in meal:  # 파서 메시지 있는지 확인, 없으면 만들어서 응답
                 briefing_meal_ga = "%s 급식은 %s 입니다." % (
-                    date_ko, meal["menu"].replace('\n', '').replace(',', ', ').replace('⭐', ''))
+                    date_ko, re.sub(r'\[[^\]]*\]', '', meal["menu"].replace('\n', '').replace(',', ', ').replace('⭐', '')))
                 briefing_meal = "%s 급식:\n%s" % (date_ko, meal["menu"].replace('\n\n', '\n'))
             if meal["message"] == "등록된 데이터가 없습니다.":
                 log.info("[#%s] briefing@modules/chat.py: No Meal" % req_id)
@@ -335,7 +335,7 @@ def briefing(uid: str, req_id: str, debugging: bool):
     # 전 쓰레드 종료 시까지 기다리기
     th_header.join()
     if hd_err:
-        return [hd_err], None, '안녕하세요, 흥덕고 급식봇입니다.\n' + hd_err
+        return [hd_err], None, '안녕하세요, 흥덕고 급식입니다.\n' + hd_err
     th_cal.join()
     th_weather.join()
     th_meal.join()
@@ -346,7 +346,7 @@ def briefing(uid: str, req_id: str, debugging: bool):
 
     # 응답 만들기
     return ["%s\n\n%s" % (briefing_header, briefing_schdl), briefing_weather,
-            "%s\n\n%s" % (re.sub(r'\[[^\]]*\]', '', briefing_meal).split('\n'), briefing_tt)], None, ga_respns
+            "%s\n\n%s" % (briefing_meal, briefing_tt)], None, ga_respns
 
 
 def lol(params, req_id, debugging):
