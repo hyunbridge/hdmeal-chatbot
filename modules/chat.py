@@ -342,11 +342,11 @@ def briefing(uid: str, req_id: str, debugging: bool):
     th_tt.join()
 
     # 구글어시스턴트 응답
-    ga_respns = '안녕하세요, 흥덕고 급식봇입니다.\n' + briefing_meal_ga
+    ga_respns = '안녕하세요, 흥덕고 급식입니다.\n' + briefing_meal_ga
 
     # 응답 만들기
     return ["%s\n\n%s" % (briefing_header, briefing_schdl), briefing_weather,
-            "%s\n\n%s" % (briefing_meal, briefing_tt)], None, ga_respns
+            "%s\n\n%s" % (re.sub(r'\[[^\]]*\]', '', briefing_meal).split('\n'), briefing_tt)], None, ga_respns
 
 
 def lol(params, req_id, debugging):
