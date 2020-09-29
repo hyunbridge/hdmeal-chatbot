@@ -115,11 +115,15 @@ def meal(params: dict, req_id: str, debugging: bool):
 def timetable(uid: str, params: dict, req_id: str, debugging: bool):
     try:
         log.info("[#%s] tt_registered@modules/chat.py: New Request" % req_id)
-        user_data = user.get_user(uid, req_id, debugging)  # 사용자 정보 불러오기
-        tt_grade = user_data[0]
-        tt_class = user_data[1]
-        if not tt_grade or not tt_class:
-            return ["내 정보 등록을 해주세요."], None
+        if 'grade' in params and 'class' in params:
+            tt_grade = params['grade']
+            tt_class = params['class']
+        else:
+            user_data = user.get_user(uid, req_id, debugging)  # 사용자 정보 불러오기
+            tt_grade = user_data[0]
+            tt_class = user_data[1]
+            if not tt_grade or not tt_class:
+                return ["내 정보 등록을 해주세요."], None
         if not params['date']:
             return ["언제의 시간표를 조회하시겠어요?"], None
         if isinstance(params['date'], datetime.datetime):
