@@ -79,7 +79,7 @@ def router(uid: str, intent: str, params: dict, req_id: str, debugging: bool):
             return [getData.wtemp(req_id, debugging)], None
         elif 'UserSettings' in intent:
             return user_settings(uid, req_id)
-        elif '' in intent:
+        elif 'ModifyUserInfo' in intent:
             return modify_user_info(params, uid, req_id, debugging)
         elif 'LoL' in intent:
             return lol(params, req_id, debugging)
@@ -119,8 +119,11 @@ def timetable(uid: str, params: dict, req_id: str, debugging: bool):
     try:
         log.info("[#%s] tt_registered@modules/chat.py: New Request" % req_id)
         if 'grade' in params and 'class' in params:
-            tt_grade = params['grade']
-            tt_class = params['class']
+            try:
+                tt_grade = int(params['grade'])
+                tt_class = int(params['class'])
+            except ValueError:
+                return ["올바른 숫자를 입력해 주세요."], None
             suggest_to_register = True
         else:
             user_data = user.get_user(uid, req_id, debugging)  # 사용자 정보 불러오기
