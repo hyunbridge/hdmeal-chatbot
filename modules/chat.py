@@ -79,6 +79,8 @@ def router(uid: str, intent: str, params: dict, req_id: str, debugging: bool):
             return [getData.wtemp(req_id, debugging)], None
         elif 'UserSettings' in intent:
             return user_settings(uid, req_id)
+        elif '' in intent:
+            return modify_user_info(params, uid, req_id, debugging)
         elif 'LoL' in intent:
             return lol(params, req_id, debugging)
         else:
@@ -113,6 +115,7 @@ def meal(params: dict, req_id: str, debugging: bool):
 
 # 시간표 조회
 def timetable(uid: str, params: dict, req_id: str, debugging: bool):
+    suggest_to_register = False
     try:
         log.info("[#%s] tt_registered@modules/chat.py: New Request" % req_id)
         if 'grade' in params and 'class' in params:
@@ -122,13 +125,38 @@ def timetable(uid: str, params: dict, req_id: str, debugging: bool):
             user_data = user.get_user(uid, req_id, debugging)  # 사용자 정보 불러오기
             tt_grade = user_data[0]
             tt_class = user_data[1]
+            suggest_to_register = True
             if not tt_grade or not tt_class:
-                return ["내 정보 등록을 해주세요."], None
+                return [{
+                    "type": "card",
+                    "title": "사용자 정보를 찾을 수 없습니다.",
+                    "body": '"내 정보 관리"를 눌러 학년/반 정보를 등록 하시거나, '
+                            '"1학년 1반 시간표 알려줘"와 같이 조회할 학년/반을 직접 언급해 주세요.',
+                    "buttons": [
+                        {
+                            "type": "message",
+                            "title": "내 정보 관리"
+                        }
+                    ]
+                }], None
         if not params['date']:
             return ["언제의 시간표를 조회하시겠어요?"], None
         if isinstance(params['date'], datetime.datetime):
             date: datetime = params['date']
-            return [getData.tt(tt_grade, tt_class, date, req_id, debugging)], None
+            if suggest_to_register:
+                return [getData.tt(tt_grade, tt_class, date, req_id, debugging), {
+                    "type": "card",
+                    "title": "방금 입력하신 정보를 저장할까요?",
+                    "body": "학년/반 정보를 등록하시면 다음부터 더 빠르고 편하게 이용하실 수 있습니다.",
+                    "buttons": [
+                        {
+                            "type": "message",
+                            "title": "사용자 정보 등록: %d학년 %d반" % (tt_grade, tt_class)
+                        }
+                    ]
+                }], None
+            else:
+                return [getData.tt(tt_grade, tt_class, date, req_id, debugging)], None
         else:
             return ["정확한 날짜를 입력해주세요.\n현재 시간표조회에서는 여러날짜 조회를 지원하지 않습니다."], None
     except ConnectionError:
@@ -479,6 +507,16 @@ def user_settings(uid: str, req_id: str):
             }
         ]
     }], None
+
+
+def modify_user_info(params: dict, uid: str, req_id: str, debugging: bool):
+    try:
+        user.manage_user(uid, int(params['grade']), int(params['class']), req_id, debugging)
+    except KeyError:
+        return ["변경할 학년/반 정보를 입력해 주세요."], None
+    except ValueError:
+        return ["올바른 숫자를 입력해 주세요."], None
+    return ["저장되었습니다."], None
 
 
 def notify(reqdata, req_id, debugging):
