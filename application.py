@@ -293,9 +293,14 @@ class Fulfillment(Resource):
                                     "text": button['title'],
                                     "postback": button['url']})
                             elif button['type'] == 'message':
-                                card["card"]["buttons"].append({
-                                    "label": button['title'],
-                                    "postback": button['title']})
+                                if 'postback' in button:
+                                    card["card"]["buttons"].append({
+                                        "label": button['title'],
+                                        "postback": button['postback']})
+                                else:
+                                    card["card"]["buttons"].append({
+                                        "label": button['title'],
+                                        "postback": button['title']})
                     outputs.append(card)
         try:
             ga_respns = respns[2]
@@ -378,9 +383,14 @@ class Skill(Resource):
                                                                      "label": button['title'],
                                                                      "webLinkUrl": button['url']})
                             elif button['type'] == 'message':
-                                card["basicCard"]["buttons"].append({"action": "message",
-                                                                     "label": button['title'],
-                                                                     "messageText": button['title']})
+                                if 'postback' in button:
+                                    card["basicCard"]["buttons"].append({"action": "message",
+                                                                         "label": button['title'],
+                                                                         "messageText": button['postback']})
+                                else:
+                                    card["basicCard"]["buttons"].append({"action": "message",
+                                                                         "label": button['title'],
+                                                                         "messageText": button['title']})
                     outputs.append(card)
         return {'version': '2.0', 'template': {'outputs': outputs}}, 200, {"X-HDMeal-Req-ID": req_id}
 

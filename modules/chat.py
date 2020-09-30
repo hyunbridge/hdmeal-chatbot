@@ -121,11 +121,11 @@ def timetable(uid: str, params: dict, req_id: str, debugging: bool):
         if 'grade' in params and 'class' in params:
             tt_grade = params['grade']
             tt_class = params['class']
+            suggest_to_register = True
         else:
             user_data = user.get_user(uid, req_id, debugging)  # 사용자 정보 불러오기
             tt_grade = user_data[0]
             tt_class = user_data[1]
-            suggest_to_register = True
             if not tt_grade or not tt_class:
                 return [{
                     "type": "card",
@@ -151,7 +151,8 @@ def timetable(uid: str, params: dict, req_id: str, debugging: bool):
                     "buttons": [
                         {
                             "type": "message",
-                            "title": "사용자 정보 등록: %d학년 %d반" % (tt_grade, tt_class)
+                            "title": "네, 저장해 주세요.",
+                            "postback": "사용자 정보 등록: %d학년 %d반" % (tt_grade, tt_class)
                         }
                     ]
                 }], None
