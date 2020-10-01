@@ -65,14 +65,14 @@ def getuserid(uid):
     return 'KT-' + enc.hexdigest()
 
 
-def router(uid: str, intent: str, params: dict, req_id: str, debugging: bool):
+def router(platform: str, uid: str, intent: str, params: dict, req_id: str, debugging: bool):
     try:
         if 'Briefing' in intent:
             return briefing(uid, req_id, debugging)
         elif 'Meal' in intent:
             return meal(params, req_id, debugging)
         elif 'Timetable' in intent:
-            return timetable(uid, params, req_id, debugging)
+            return timetable(platform, uid, params, req_id, debugging)
         elif 'Schedule' in intent:
             return schdl(params, req_id, debugging)
         elif 'WaterTemperature' in intent:
@@ -114,34 +114,39 @@ def meal(params: dict, req_id: str, debugging: bool):
 
 
 # 시간표 조회
-def timetable(uid: str, params: dict, req_id: str, debugging: bool):
+def timetable(platform: str, uid: str, params: dict, req_id: str, debugging: bool):
     suggest_to_register = False
     try:
         log.info("[#%s] tt_registered@modules/chat.py: New Request" % req_id)
-        if 'grade' in params and 'class' in params:
+        print(params)
+        if 'grade' in params and 'class' in params and params['grade'] and params['class']:
             try:
                 tt_grade = int(params['grade'])
                 tt_class = int(params['class'])
             except ValueError:
                 return ["올바른 숫자를 입력해 주세요."], None
-            suggest_to_register = True
+            if platform == 'KT':
+                suggest_to_register = True
         else:
             user_data = user.get_user(uid, req_id, debugging)  # 사용자 정보 불러오기
             tt_grade = user_data[0]
             tt_class = user_data[1]
             if not tt_grade or not tt_class:
-                return [{
-                    "type": "card",
-                    "title": "사용자 정보를 찾을 수 없습니다.",
-                    "body": '"내 정보 관리"를 눌러 학년/반 정보를 등록 하시거나, '
-                            '"1학년 1반 시간표 알려줘"와 같이 조회할 학년/반을 직접 언급해 주세요.',
-                    "buttons": [
-                        {
-                            "type": "message",
-                            "title": "내 정보 관리"
-                        }
-                    ]
-                }], None
+                if platform == 'KT':
+                    return [{
+                        "type": "card",
+                        "title": "사용자 정보를 찾을 수 없습니다.",
+                        "body": '"내 정보 관리"를 눌러 학년/반 정보를 등록 하시거나, '
+                                '"1학년 1반 시간표 알려줘"와 같이 조회할 학년/반을 직접 언급해 주세요.',
+                        "buttons": [
+                            {
+                                "type": "message",
+                                "title": "내 정보 관리"
+                            }
+                        ]
+                    }], None
+                else:
+                    return ['사용자 정보를 찾을 수 없습니다. "내 정보 관리"를 눌러 학년/반 정보를 등록해 주세요.'], None
         if not params['date']:
             return ["언제의 시간표를 조회하시겠어요?"], None
         if isinstance(params['date'], datetime.datetime):
