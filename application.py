@@ -237,23 +237,23 @@ class Fulfillment(Resource):
         prefix: str = ''
         try:  # 페이스북 메신저
             uid = req_data['originalDetectIntentRequest']['payload']['data']['sender']['id']
-            prefix = 'FB-'
+            prefix = 'FB'
         except KeyError:
             pass
         try:  # 텔레그램
             uid = str(req_data['originalDetectIntentRequest']['payload']['data']['from']['id'])
-            prefix = 'TG-'
+            prefix = 'TG'
         except KeyError:
             pass
         try:  # 라인
             uid = req_data['originalDetectIntentRequest']['payload']['data']['source']['userId']
-            prefix = 'LN-'
+            prefix = 'LN'
         except KeyError:
             pass
         if uid:  # 사용자 ID 변환(해싱+Prefix 붙이기)
             enc = hashlib.sha256()
             enc.update(uid.encode("utf-8"))
-            uid = prefix + enc.hexdigest()
+            uid = prefix + '-' + enc.hexdigest()
         else:  # 사용자 ID 없을경우 익명처리
             uid = "ANON-" + req_id
         try:
@@ -271,7 +271,7 @@ class Fulfillment(Resource):
         # 로그 남기기
         security.log_req(uid, utterance, intent, params, req_id, "Dialogflow")
         # 요청 수행하기
-        respns: tuple = chat.router(uid, intent, params, req_id, debugging)
+        respns: tuple = chat.router(prefix, uid, intent, params, req_id, debugging)
         # Fulfillment API 형식으로 변환
         outputs = []
         for item in respns[0]:
@@ -361,7 +361,7 @@ class Skill(Resource):
         # 로그 남기기
         security.log_req(uid, utterance, intent, params, req_id, "Kakao i")
         # 요청 수행하기
-        respns: tuple = chat.router(uid, intent, params, req_id, debugging)
+        respns: tuple = chat.router('KT', uid, intent, params, req_id, debugging)
         # Kakao i API 형식으로 변환
         outputs = []
         for item in respns[0]:
