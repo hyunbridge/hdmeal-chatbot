@@ -5,7 +5,7 @@
 # ██║  ██║██████╔╝██║ ╚═╝ ██║███████╗██║  ██║███████╗
 # ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
 # Copyright 2019-2020, Hyungyo Seo
-# modules/TTParser.py - 컴시간 서버에 접속하여 시간표정보를 파싱해오는 스크립트입니다.
+# timetable_parser.py - 컴시간 서버에 접속하여 시간표정보를 파싱해오는 스크립트입니다.
 
 import ast
 import base64
@@ -17,7 +17,7 @@ import urllib.error
 import urllib.parse as urlparse
 import urllib.request
 
-from modules import log, conf
+from modules.common import conf, log
 
 # 컴시간알리미 웹사이트 URL
 url = "http://comci.kr/st/"
@@ -39,7 +39,7 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
     tt_class = int(tt_class)
 
     log.info(
-        "[#%s] parse@modules/TTParser.py: Started Parsing Timetable(%s-%s, %s)" % (req_id, tt_grade, tt_class, tt_date))
+        "[#%s] parse@timetable_parser.py: Started Parsing Timetable(%s-%s, %s)" % (req_id, tt_grade, tt_class, tt_date))
 
     # 데이터 가져오기
     def fetch():
@@ -169,13 +169,13 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
             data_1 = json_cache["1"]
             data_2 = json_cache["2"]
         except (urllib.error.HTTPError, urllib.error.URLError) as e:
-            log.err("[#%s] fetch.parse@modules/TTParser.py: Failed to Parse Timetable(%s-%s, %s) because %s" % (
+            log.err("[#%s] fetch.parse@timetable_parser.py: Failed to Parse Timetable(%s-%s, %s) because %s" % (
                 req_id, tt_grade, tt_class, tt_date, e))
             raise ConnectionError
 
     if os.path.isfile('data/cache/TT.json'):  # 캐시 있으면
         try:
-            log.info("[#%s] parse@modules/TTParser.py: Read Data in Cache" % req_id)
+            log.info("[#%s] parse@timetable_parser.py: Read Data in Cache" % req_id)
             with open('data/cache/TT.json', encoding="utf-8") as data_file:  # 캐시 읽기
                 global data_1, data_2
                 data = json.load(data_file)
@@ -186,17 +186,17 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
                 # 캐시 삭제
                 os.remove('data/cache/TT.json')
             except Exception as error:
-                log.err("[#%s] parse@modules/TTParser.py: Failed to Delete Cache" % req_id)
+                log.err("[#%s] parse@timetable_parser.py: Failed to Delete Cache" % req_id)
                 return error
             fetch()  # 파싱
         # 캐시 유효하면
         if datetime.datetime.now() - datetime.datetime.fromtimestamp(data["Timestamp"]) < datetime.timedelta(hours=3):
-            log.info("[#%s] parse@modules/TTParser.py: Use Data in Cache" % req_id)
+            log.info("[#%s] parse@timetable_parser.py: Use Data in Cache" % req_id)
         else:  # 캐시 무효하면
-            log.info("[#%s] parse@modules/TTParser.py: Cache Expired" % req_id)
+            log.info("[#%s] parse@timetable_parser.py: Cache Expired" % req_id)
             fetch()  # 파싱
     else:  # 캐시 없으면
-        log.info("[#%s] parse@modules/TTParser.py: No Cache" % req_id)
+        log.info("[#%s] parse@timetable_parser.py: No Cache" % req_id)
         fetch()  # 파싱
 
     # 날짜비교 기준일(2번째 자료의 시작일) 파싱
@@ -255,7 +255,7 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
         elif tt_num > og_tt_num:
             return_data.append("[MSG]⭐연장수업이 있습니다. (%s교시 → %s교시)" % (og_tt_num, tt_num))
 
-        log.info("[#%s] parse@modules/TTParser.py: Succeeded(%s-%s, %s)" % (
+        log.info("[#%s] parse@timetable_parser.py: Succeeded(%s-%s, %s)" % (
             req_id, tt_grade, tt_class, tt_date))
     else:
         return_data.append("[MSG]⭐수업을 실시하지 않습니다. (시간표 없음)")

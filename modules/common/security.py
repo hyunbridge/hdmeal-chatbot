@@ -5,7 +5,7 @@
 # ██║  ██║██████╔╝██║ ╚═╝ ██║███████╗██║  ██║███████╗
 # ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
 # Copyright 2019-2020, Hyungyo Seo
-# modules/security.py - 보안 관련 기능들을 담당하는 스크립트입니다.
+# security.py - 보안 관련 기능들을 담당하는 스크립트입니다.
 
 import datetime
 import random
@@ -13,7 +13,7 @@ import authlib.jose.errors as JWTErrors
 import pymongo
 import requests
 from authlib.jose import JsonWebToken, JWTClaims
-from modules import conf, log, base58
+from modules.common import base58, conf, log
 
 # DB정보 불러오기
 connection = pymongo.MongoClient(conf.configs['DataBase']['ConnectString'])
@@ -63,7 +63,7 @@ def log_req(uid: str, utterance: str, intent: str, params: dict, req_id: str, pl
 
 # JWT 토큰 생성
 def generate_token(issuer: str, uid: str, scope: list, req_id: str):
-    log.info("[#%s] generate_token@modules/security.py: Token Generated" % req_id)
+    log.info("[#%s] generate_token@security.py: Token Generated" % req_id)
     now = datetime.datetime.utcnow()
     return jwt.encode(
         {
@@ -86,12 +86,12 @@ def validate_token(token: str, req_id: str):
         decoded = jwt.decode(token, conf.configs['Misc']['Settings']['Secret'], claims_options=claim_options)
         decoded.validate()
     except JWTErrors.ExpiredTokenError:
-        log.info("[#%s] validate_token@modules/security.py: Expired Token" % req_id)
+        log.info("[#%s] validate_token@security.py: Expired Token" % req_id)
         return False, "ExpiredToken"
     except JWTErrors.JoseError:
-        log.info("[#%s] validate_token@modules/security.py: Invalid Token" % req_id)
+        log.info("[#%s] validate_token@security.py: Invalid Token" % req_id)
         return False, "InvalidToken"
-    log.info("[#%s] validate_token@modules/security.py: Valid Token (ISS %s)" % (req_id, decoded['iss']))
+    log.info("[#%s] validate_token@security.py: Valid Token (ISS %s)" % (req_id, decoded['iss']))
     return True, decoded['uid'], decoded['scope']
 
 # 리캡챠 토큰 검증
@@ -103,13 +103,13 @@ def validate_recaptcha(token: str, req_id: str):
         )
         rspns = req.json()
     except Exception:
-        log.err("[#%s] validate_recaptcha@modules/security.py: Recaptcha Validation Error" % req_id)
+        log.err("[#%s] validate_recaptcha@security.py: Recaptcha Validation Error" % req_id)
         return False, "RecaptchaTokenValidationError"
     if rspns['success']:
-        log.info("[#%s] validate_recaptcha@modules/security.py: Valid Recaptcha Token" % req_id)
+        log.info("[#%s] validate_recaptcha@security.py: Valid Recaptcha Token" % req_id)
         return True,
     else:
-        log.info("[#%s] validate_recaptcha@modules/security.py: Invalid Recaptcha Token" % req_id)
+        log.info("[#%s] validate_recaptcha@security.py: Invalid Recaptcha Token" % req_id)
         return False, "InvalidRecaptchaToken"
 
 # 요청 ID 생성

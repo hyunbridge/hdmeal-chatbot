@@ -10,13 +10,16 @@ import argparse
 import datetime
 import hashlib
 import json
-import re
-import requests
-from flask import Flask, make_response
+from flask import Flask
 from flask_restful import request, Api, Resource
-from modules import conf
+
+from modules.common import conf, log
+
 conf.load()
-from modules import getData, log, cache, user, chat, security, FB
+
+from modules import facebook_page
+from modules.chatbot import chat, user
+from modules.common import security, cache
 
 # 디버그용
 debugging = False
@@ -65,14 +68,12 @@ def auth(original_fn):
                 return original_fn(*args, **kwargs)
             else:
                 return {'version': '2.0', 'data': {'msg': "미승인 토큰"}}, 403
-
     return wrapper_fn
 
 
 # Flask 인스턴스 생성
 app = Flask(__name__)
 api = Api(app)
-# limiter = Limiter(app, key_func=get_ipaddr)
 log.info("Server Started")
 
 
@@ -98,7 +99,6 @@ cors_headers = {
 
 
 class UserSettingsREST(Resource):
-    # decorators = [limiter.limit('120/day;30/hour;10/minute;3/second')]
     @staticmethod
     @request_id
     def get():
@@ -135,7 +135,6 @@ class UserSettingsREST(Resource):
 
 # 사용 데이터 관리
 class ManageUsageData(Resource):
-    # decorators = [limiter.limit('80/day;20/hour;7/minute;3/second')]
     @staticmethod
     @request_id
     def get():
@@ -350,7 +349,7 @@ class FBPage(Resource):
     @request_id
     @auth
     def post():
-        response = FB.publish(conf.configs['Tokens']['FBPage']['Page-Access-Token'], req_id, debugging)
+        response = facebook_page.publish(conf.configs['Tokens']['FBPage']['Page-Access-Token'], req_id, debugging)
         if isinstance(response, tuple):
             return response + ({"X-HDMeal-Req-ID": req_id},)
         else:

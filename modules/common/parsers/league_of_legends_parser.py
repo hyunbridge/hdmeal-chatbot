@@ -5,7 +5,7 @@
 # ██║  ██║██████╔╝██║ ╚═╝ ██║███████╗██║  ██║███████╗
 # ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
 # Copyright 2019-2020, Hyungyo Seo
-# modules/LoL.py - Riot Games API를 통해 롤 전적을 조회하는 스크립트입니다.
+# league_of_legends_parser.py - Riot Games API를 통해 롤 전적을 조회하는 스크립트입니다.
 
 import json
 import os
@@ -14,7 +14,7 @@ import urllib.parse
 import urllib.request
 from collections import Counter
 
-from modules import log, conf
+from modules.common import conf, log
 
 # 디버깅용
 summoner_name_for_debug = "Hide on Bush"
@@ -27,7 +27,7 @@ ddragon_version = conf.configs['Misc']['LoL']['DataDragonVersion']
 # Riot Games API 사용
 def parse(summoner_name, req_id, debugging):
     global api_key
-    log.info("[#%s] parse@modules/LoL.py: Started" % req_id)
+    log.info("[#%s] parse@league_of_legends_parser.py: Started" % req_id)
 
     if debugging:
         if not summoner_name:
@@ -54,7 +54,7 @@ def parse(summoner_name, req_id, debugging):
             return "Invalid Token"
         if debugging:
             print(e)
-        log.err("[#%s] parse@modules/LoL.py: Failed to Parse Summoner Data because %s" % (req_id, e))
+        log.err("[#%s] parse@league_of_legends_parser.py: Failed to Parse Summoner Data because %s" % (req_id, e))
         raise e
 
     # 소환사의 리그정보 가져오기
@@ -68,7 +68,7 @@ def parse(summoner_name, req_id, debugging):
     except Exception as e:
         if debugging:
             print(e)
-        log.err("[#%s] parse@modules/LoL.py: Failed to Parse League Data because %s" % (req_id, e))
+        log.err("[#%s] parse@league_of_legends_parser.py: Failed to Parse League Data because %s" % (req_id, e))
         raise e
 
     # 소환사의 경기전적 가져오기
@@ -85,7 +85,7 @@ def parse(summoner_name, req_id, debugging):
         else:
             if debugging:
                 print(e)
-            log.err("[#%s] parse@modules/LoL.py: Failed to Parse Match Data because %s" % (req_id, e))
+            log.err("[#%s] parse@league_of_legends_parser.py: Failed to Parse Match Data because %s" % (req_id, e))
             raise e
 
     # 소환사 정보 딕셔너리로 만들기
@@ -147,13 +147,13 @@ def parse(summoner_name, req_id, debugging):
                 with open('data/champion.json', encoding="utf-8") as data_file:  # 캐시 읽기
                     champion_data = json.load(data_file)["data"]
             else:  # 캐시 없으면
-                if os.path.isfile('../data/champion.json'):
-                    with open('../data/champion.json', encoding="utf-8") as data_file:  # 캐시 읽기
+                if os.path.isfile('../../../data/champion.json'):
+                    with open('../../../data/champion.json', encoding="utf-8") as data_file:  # 캐시 읽기
                         champion_data = json.load(data_file)["data"]
         except Exception as error:
             if debugging:
                 print(error)
-            log.err("[#%s] parse@modules/LoL.py: Failed to Parse Champion Data" % req_id)
+            log.err("[#%s] parse@league_of_legends_parser.py: Failed to Parse Champion Data" % req_id)
             return error
         for i in champion_data:
             champion_names[int(champion_data[i]["key"])] = champion_data[i]["name"]
@@ -169,7 +169,7 @@ def parse(summoner_name, req_id, debugging):
         data["preferredLane"] = None
         data["preferredChampion"] = None
 
-    log.info("[#%s] parse@modules/LoL.py: Succeeded" % req_id)
+    log.info("[#%s] parse@league_of_legends_parser.py: Succeeded" % req_id)
 
     return data
 

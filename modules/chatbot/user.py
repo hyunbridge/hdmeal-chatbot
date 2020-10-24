@@ -5,7 +5,7 @@
 # ██║  ██║██████╔╝██║ ╚═╝ ██║███████╗██║  ██║███████╗
 # ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
 # Copyright 2019-2020, Hyungyo Seo
-# modules/user.py - 사용자 관리 및 인증을 담당하는 스크립트입니다.
+# user.py - 사용자 관리 및 인증을 담당하는 스크립트입니다.
 
 import base64
 import datetime
@@ -14,7 +14,7 @@ import zipfile
 from io import BytesIO
 import pymongo
 import pytz
-from modules import log, conf, security
+from modules.common import security, conf, log
 
 timezone_local = pytz.timezone('Asia/Seoul')
 
@@ -43,21 +43,21 @@ def json_default(value):
 
 # 사용자 정보 읽기
 def get_user(uid: str, req_id: str, debugging: bool):
-    log.info("[#%s] get_user@modules/user.py: Started Fetching User Info" % req_id)
+    log.info("[#%s] get_user@user.py: Started Fetching User Info" % req_id)
     try:
         data = users_collection.find_one({'UID': uid})
         if debugging:
             print(data)
         if not data:  # 사용자 정보 없을 때
             return_data = [None, None]
-            log.info("[#%s] get_user@modules/user.py: No User Info" % req_id)
+            log.info("[#%s] get_user@user.py: No User Info" % req_id)
             return return_data
         if data['Grade'] and data['Class']:  # 사용자 정보 있을 때
             return_data = [data['Grade'], data['Class']]
-            log.info("[#%s] get_user@modules/user.py: Succeeded" % req_id)
+            log.info("[#%s] get_user@user.py: Succeeded" % req_id)
         else:  # 사용자 정보 없을 때
             return_data = [None, None]
-            log.info("[#%s] get_user@modules/user.py: No User Info" % req_id)
+            log.info("[#%s] get_user@user.py: No User Info" % req_id)
         return return_data
     except Exception:
         return Exception
@@ -65,31 +65,31 @@ def get_user(uid: str, req_id: str, debugging: bool):
 
 # 사용자 생성 및 수정
 def manage_user(uid: str, user_grade: int, user_class: int, req_id: str, debugging: bool):
-    log.info("[#%s] manage_user@modules/user.py: Started Managing User Info" % req_id)
+    log.info("[#%s] manage_user@user.py: Started Managing User Info" % req_id)
     try:
         data = users_collection.find_one({'UID': uid})
         if debugging:
             print(data)
         if data:  # 사용자 정보 있을 때
             if data['Grade'] == user_grade and data['Class'] == user_class:  # 사용자 정보 똑같을 때
-                log.info("[#%s] manage_user@modules/user.py: Same" % req_id)
+                log.info("[#%s] manage_user@user.py: Same" % req_id)
                 return "Same"
             else:  # 사용자 정보 있고 같지도 않을 때 - 업데이트
                 data = users_collection.update({'UID': uid}, {'$set': {'Grade': user_grade, 'Class': user_class}})
-                log.info("[#%s] manage_user@modules/user.py: Updated" % req_id)
+                log.info("[#%s] manage_user@user.py: Updated" % req_id)
                 return "Updated"
         else:  # 사용자 정보 없을 때 - 생성
             users_collection.insert_one({"UID": uid, "Grade": user_grade, "Class": user_class})
-            log.info("[#%s] manage_user@modules/user.py: Registered" % req_id)
+            log.info("[#%s] manage_user@user.py: Registered" % req_id)
             return "Registered"
     except Exception:
-        log.err("[#%s] manage_user@modules/user.py: Failed" % req_id)
+        log.err("[#%s] manage_user@user.py: Failed" % req_id)
         return Exception
 
 
 # 사용자 삭제
 def delete_user(uid: str, req_id: str, debugging: bool):
-    log.info("[#%s] delete_user@modules/user.py: Started Deleting User Info" % req_id)
+    log.info("[#%s] delete_user@user.py: Started Deleting User Info" % req_id)
     try:
         data = users_collection.find_one({'UID': uid})
         if data:  # 사용자 정보 있을 때
@@ -97,10 +97,10 @@ def delete_user(uid: str, req_id: str, debugging: bool):
                 print("DEL USER")
             users_collection.remove({'UID': uid})
         else:  # 사용자 정보 없을 때
-            log.info("[#%s] delete_user@modules/user.py: No User Info" % req_id)
+            log.info("[#%s] delete_user@user.py: No User Info" % req_id)
             return "NotExist"
     except Exception:
-        log.err("[#%s] delete_user@modules/user.py: Failed" % req_id)
+        log.err("[#%s] delete_user@user.py: Failed" % req_id)
         return Exception
 
 
@@ -111,10 +111,10 @@ def auth_admin(uid, req_id, debugging):
         print(uid)
         print(data)
     if uid in data:
-        log.info("[#%s] auth_admin@modules/user.py: Match" % req_id)
+        log.info("[#%s] auth_admin@user.py: Match" % req_id)
         return True
     else:
-        log.info("[#%s] auth_admin@modules/user.py: Not Match" % req_id)
+        log.info("[#%s] auth_admin@user.py: Not Match" % req_id)
         return False
 
 
@@ -174,7 +174,7 @@ def validate_recaptcha(original_fn):
             else:
                 return hdm_error(validation[1])
         else:
-            log.info("[#%s] validate_recaptcha@modules/user.py: No Recaptcha Token" % args[1])
+            log.info("[#%s] validate_recaptcha@user.py: No Recaptcha Token" % args[1])
             return hdm_error("NoRecaptchaToken")
 
     return wrapper_fn
@@ -188,7 +188,7 @@ def user_settings_rest_get(req, req_id, debugging):
         try:
             user = get_user(uid, req_id, debugging)
         except Exception as error:
-            log.err("[#%s] user_settings_rest_get@modules/user.py: %s" % (req_id, error))
+            log.err("[#%s] user_settings_rest_get@user.py: %s" % (req_id, error))
             return hdm_error("ServerError")
         return {'classes': list(range(1, classes + 1)), 'current_grade': user[0], 'current_class': user[1]}
     else:
@@ -208,7 +208,7 @@ def user_settings_rest_post(req, req_id, debugging):
             try:
                 manage_user(uid, user_grade, user_class, req_id, debugging)
             except Exception as error:
-                log.err("[#%s] user_settings_rest_post@modules/user.py: %s" % (req_id, error))
+                log.err("[#%s] user_settings_rest_post@user.py: %s" % (req_id, error))
                 return hdm_error("ServerError")
             return {'message': "저장했습니다."}
         else:
@@ -226,7 +226,7 @@ def user_settings_rest_delete(req, req_id, debugging):
     try:
         delete_user(uid, req_id, debugging)
     except Exception as error:
-        log.err("[#%s] user_settings_rest_delete@modules/user.py: %s" % (req_id, error))
+        log.err("[#%s] user_settings_rest_delete@user.py: %s" % (req_id, error))
         return hdm_error("ServerError")
     return {'message': "삭제했습니다."}
 

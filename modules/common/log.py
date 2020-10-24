@@ -5,7 +5,7 @@
 # ██║  ██║██████╔╝██║ ╚═╝ ██║███████╗██║  ██║███████╗
 # ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
 # Copyright 2019-2020, Hyungyo Seo
-# modules/log.py - 로깅 기능을 관리하는 스크립트입니다.
+# log.py - 로깅 기능을 관리하는 스크립트입니다.
 
 import logging
 import logging.handlers

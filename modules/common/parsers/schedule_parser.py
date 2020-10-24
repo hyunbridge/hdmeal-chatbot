@@ -5,14 +5,13 @@
 # ██║  ██║██████╔╝██║ ╚═╝ ██║███████╗██║  ██║███████╗
 # ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
 # Copyright 2019-2020, Hyungyo Seo
-# modules/scheduleParser.py - NEIS 서버에 접속하여 학사일정을 파싱해오는 스크립트입니다.
+# schedule_parser.py - NEIS 서버에 접속하여 학사일정을 파싱해오는 스크립트입니다.
 
 import json
 import urllib.error
 import urllib.request
 from bs4 import BeautifulSoup
-from modules import log, conf
-
+from modules.common import conf, log
 
 # 설정 불러오기
 school_code = conf.configs['School']['NEIS']['Code']
@@ -21,7 +20,7 @@ neis_baseurl = conf.configs['School']['NEIS']['BaseURL']
 
 def parse(year, month, req_id, debugging):
 
-    log.info("[#%s] parse@modules/scheduleParser.py: Started Parsing Schedule(%s-%s)" % (req_id, year, month))
+    log.info("[#%s] parse@schedule_parser.py: Started Parsing Schedule(%s-%s)" % (req_id, year, month))
 
     # 학년도 기준, 다음해 2월까지 전년도로 조회
     if month < 3:
@@ -38,7 +37,7 @@ def parse(year, month, req_id, debugging):
                % (school_code, school_kind, school_kind, school_year, month))
         req = urllib.request.urlopen(url, timeout=2)
     except (urllib.error.HTTPError, urllib.error.URLError) as e:
-        log.err("[#%s] parse@modules/scheduleParser.py: Failed to Parse Schedule(%s-%s) because %s" % (
+        log.err("[#%s] parse@schedule_parser.py: Failed to Parse Schedule(%s-%s) because %s" % (
             req_id, year, month, e))
         raise ConnectionError
 
@@ -68,7 +67,7 @@ def parse(year, month, req_id, debugging):
             json.dump(calendar, make_file, ensure_ascii=False)
             print("File Created")
 
-    log.info("[#%s] parse@modules/scheduleParser.py: Succeeded(%s-%s)" % (req_id, year, month))
+    log.info("[#%s] parse@schedule_parser.py: Succeeded(%s-%s)" % (req_id, year, month))
 
     return 0
 
