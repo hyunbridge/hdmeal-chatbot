@@ -161,57 +161,6 @@ class ManageUsageData(Resource):
         return None, 200, cors_headers
 
 
-# 푸시 알림 보내기
-class Notify(Resource):
-    @staticmethod
-    @request_id
-    @auth
-    def post():
-        now = datetime.datetime.now()
-        onesignal_app_id = conf.configs['Tokens']['OneSignal']['AppID']
-        onesignal_api_key = conf.configs['Tokens']['OneSignal']["APIKey"]
-        try:
-            req_data: dict = request.json
-            title = req_data["Title"]
-            url = req_data["URL"]
-        except KeyError as key:
-            return {"message": "Missing Value: %s Required" % key}, 400, {"X-HDMeal-Req-ID": req_id}
-        except TypeError:
-            return {"message": "Request Body is Not JSON Format"}, 400, {"X-HDMeal-Req-ID": req_id}
-        except Exception as e:
-            if 'Failed to decode JSON object' in str(e):
-                return {"message": "Malformed JSON in request body"}, 400, {"X-HDMeal-Req-ID": req_id}
-            else:
-                return {"message": "Bad Request"}, 400, {"X-HDMeal-Req-ID": req_id}
-        if now.weekday() >= 5:
-            return {"message": "알림미발송(주말)"}, 200, {"X-HDMeal-Req-ID": req_id}
-        meal = getData.meal(now.year, now.month, now.day, req_id, debugging)
-        if not "menu" in meal:
-            return {"message": "알림미발송(정보없음)"}, 200, {"X-HDMeal-Req-ID": req_id}
-        reqbody = {
-            "app_id": onesignal_app_id,
-            "headings": {
-                "en": title
-            },
-            "contents": {
-                "en": meal["date"] + " 급식:\n" + re.sub(r'\[[^\]]*\]', '', meal["menu"]).replace('⭐', '')
-            },
-            "url": url,
-            "included_segments": [
-                "All"
-            ]
-        }
-        reqheader = {
-            "Content-Type": "application/json",
-            "Authorization": "Basic " + onesignal_api_key
-        }
-        try:
-            requests.post("https://onesignal.com/api/v1/notifications", data=json.dumps(reqbody), headers=reqheader)
-        except Exception:
-            return {"message": "발송실패"}, 500, {"X-HDMeal-Req-ID": req_id}
-        return {"message": "성공"}, 200, {"X-HDMeal-Req-ID": req_id}
-
-
 # Fulfillment API
 class Fulfillment(Resource):
     @staticmethod
@@ -408,15 +357,6 @@ class FBPage(Resource):
             return response, 200, {"X-HDMeal-Req-ID": req_id}
 
 
-# LoaderIO 지원
-class LoaderIO(Resource):
-    @staticmethod
-    def get(loaderio_token):
-        if 'LoaderIO' in conf.configs['Misc']:
-            if conf.configs['Misc']['LoaderIO'] == loaderio_token:
-                return make_response('loaderio-' + loaderio_token)
-        return make_response('Page Not Found', 404)
-
 
 # URL Router에 맵핑.(Rest URL정의)
 api.add_resource(CacheHealthCheck, '/cache/healthcheck/')
@@ -424,9 +364,7 @@ api.add_resource(UserSettingsREST, '/user/settings/')
 api.add_resource(ManageUsageData, '/user/usage-data/')
 api.add_resource(Fulfillment, '/fulfillment/')
 api.add_resource(Skill, '/skill/')
-api.add_resource(Notify, '/notify/')
 api.add_resource(FBPage, '/facebook/page/')
-api.add_resource(LoaderIO, '/loaderio-<string:loaderio_token>.html')
 
 # 서버 실행
 if __name__ == '__main__':

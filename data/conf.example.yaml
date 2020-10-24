@@ -41,10 +41,6 @@ Tokens:
   # 페이스북 페이지
   FBPage:
     Page-Access-Token: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-  # OneSignal
-  OneSignal:
-    AppID: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    APIKey: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 # 데이터베이스
 DataBase:
@@ -61,8 +57,6 @@ Misc:
     Secret: SuperSecret
     BaseURL: https://example.com/
     Access-Control-Allow-Origin: "*"
-  # LoaderIO 인증
-  LoaderIO: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
   # 롤
   LoL:
     APIBaseURL: https://kr.api.riotgames.com/
