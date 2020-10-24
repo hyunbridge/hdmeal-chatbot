@@ -5,14 +5,15 @@
 # ██║  ██║██████╔╝██║ ╚═╝ ██║███████╗██║  ██║███████╗
 # ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
 # Copyright 2019-2020, Hyungyo Seo
-# modules/FB.py - 페이스북 페이지에 급식정보를 발행하는 스크립트입니다.
+# facebook_page.py - 페이스북 페이지에 급식정보를 발행하는 스크립트입니다.
 
 import io
 import re
 from datetime import datetime, timedelta
 import facebook
 from PIL import Image, ImageDraw, ImageFont
-from modules import getData, log
+from modules.common import log
+from modules.chatbot import get_data
 
 
 def publish(fb_token, req_id, debugging):
@@ -21,21 +22,21 @@ def publish(fb_token, req_id, debugging):
     status = 200
 
     tomorrow = datetime.now() + timedelta(days=1)  # 내일
-    meal = getData.meal(str(tomorrow.year), str(tomorrow.month), str(tomorrow.day), req_id, debugging)  # 급식정보 불러오기
+    meal = get_data.meal(str(tomorrow.year), str(tomorrow.month), str(tomorrow.day), req_id, debugging)  # 급식정보 불러오기
 
-    log.info("[#%s] publish@modules/FB.py: Started Publishing" % req_id)
+    log.info("[#%s] publish@facebook_page.py: Started Publishing" % req_id)
 
     # 급식데이터가 있는지 확인
     if "message" in meal:
         if meal["message"] == "등록된 데이터가 없습니다.":
             if debugging:
                 print("NoData")
-            log.info("[#%s] publish@modules/FB.py: No Data" % req_id)
+            log.info("[#%s] publish@facebook_page.py: No Data" % req_id)
             return {"Parser": "NoData"}, 200
         else:
             if debugging:
                 print("NoData")
-            log.err("[#%s] publish@modules/FB.py: Failed to Publish" % req_id)
+            log.err("[#%s] publish@facebook_page.py: Failed to Publish" % req_id)
             return {"Parser": "ERROR"}, 500
     else:
         date = meal["date"]  # 날짜 - YYYY-MM-DD(Weekday)
@@ -47,10 +48,10 @@ def publish(fb_token, req_id, debugging):
         tmpl = Image.open('data/FB_Template.png')
         pmap_tmpl = tmpl.load()
     except FileNotFoundError:
-        log.err("[#%s] publish@modules/FB.py: Failed" % req_id)
+        log.err("[#%s] publish@facebook_page.py: Failed" % req_id)
         return {"Parser": "OK", "IMG": "Missing File"}, 500
     except Exception:
-        log.err("[#%s] publish@modules/FB.py: Failed" % req_id)
+        log.err("[#%s] publish@facebook_page.py: Failed" % req_id)
         return {"Parser": "OK", "IMG": "FAIL"}, 500
 
     # 이미지 생성
@@ -106,7 +107,7 @@ def publish(fb_token, req_id, debugging):
         fb = "No Token"
 
     # OK 반환
-    log.info("[#%s] publish@modules/FB.py: Succeeded" % req_id)
+    log.info("[#%s] publish@facebook_page.py: Succeeded" % req_id)
     return {"Parser": "OK", "IMG": "OK", "fb": fb}, status
 
 # 디버그

@@ -5,14 +5,15 @@
 # ██║  ██║██████╔╝██║ ╚═╝ ██║███████╗██║  ██║███████╗
 # ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
 # Copyright 2019-2020, Hyungyo Seo
-# modules/getData.py - 급식, 시간표, 캐시정보를 가져오는 스크립트입니다.
+# get_data.py - 급식, 시간표, 캐시정보를 가져오는 스크립트입니다.
 
 import datetime
 import json
 import os
 import urllib.request
 from collections import OrderedDict
-from modules import mealParser, scheduleParser, WTempParser, TTParser, weatherParser, log
+from modules.common import log
+from modules.common.parsers import menu_parser, water_temp_parser, schedule_parser, weather_parser, timetable_parser
 
 
 # 급식정보 가져오기
@@ -22,12 +23,12 @@ def meal(year, month, date, req_id, debugging):
     month = str(month).zfill(2)
     date = str(date).zfill(2)
 
-    log.info("[#%s] meal@modules/getData.py: Started Fetching Meal Data(%s-%s-%s)" % (req_id, year, month, date))
+    log.info("[#%s] meal@get_data.py: Started Fetching Meal Data(%s-%s-%s)" % (req_id, year, month, date))
 
     if not os.path.isfile('data/cache/' + year + '-' + month + '-' + date + '.json'):
-        parser = mealParser.parse(year, month, date, req_id, debugging)
+        parser = menu_parser.parse(year, month, date, req_id, debugging)
         if parser == "NoData" or parser == "":
-            log.info("[#%s] meal@modules/getData.py: No Meal Data(%s-%s-%s)" % (req_id, year, month, date))
+            log.info("[#%s] meal@get_data.py: No Meal Data(%s-%s-%s)" % (req_id, year, month, date))
             return {"message": "등록된 데이터가 없습니다."}
 
     try:
@@ -38,9 +39,9 @@ def meal(year, month, date, req_id, debugging):
     except FileNotFoundError:  # 파일 없을때
         if debugging:
             print("FileNotFound")
-        log.info("[#%s] meal@modules/getData.py: No Meal Data(%s-%s-%s)" % (req_id, year, month, date))
+        log.info("[#%s] meal@get_data.py: No Meal Data(%s-%s-%s)" % (req_id, year, month, date))
         return {"message": "등록된 데이터가 없습니다."}
-    log.info("[#%s] meal@modules/getData.py: Succeeded(%s-%s-%s)" % (req_id, year, month, date))
+    log.info("[#%s] meal@get_data.py: Succeeded(%s-%s-%s)" % (req_id, year, month, date))
     return json_data
 
 
@@ -48,18 +49,18 @@ def meal(year, month, date, req_id, debugging):
 def tt(tt_grade: int, tt_class: int, date, req_id, debugging):
     tt_weekday = date.weekday()
 
-    log.info("[#%s] tt@modules/getData.py: Started Fetching Timetable Data(%s-%s, %s-%s-%s)"
+    log.info("[#%s] tt@get_data.py: Started Fetching Timetable Data(%s-%s, %s-%s-%s)"
              % (req_id, tt_grade, tt_class, date.year, date.month, date.day))
 
     if tt_weekday >= 5:  # 토요일, 일요일 제외
-        log.info("[#%s] tt@modules/getData.py: No Timetable Data(%s-%s, %s-%s-%s)"
+        log.info("[#%s] tt@get_data.py: No Timetable Data(%s-%s, %s-%s-%s)"
                  % (req_id, tt_grade, tt_class, date.year, date.month, date.day))
         return "등록된 데이터가 없습니다."
 
-    data = TTParser.parse(tt_grade, tt_class, date.year, date.month, date.day, req_id, debugging)
+    data = timetable_parser.parse(tt_grade, tt_class, date.year, date.month, date.day, req_id, debugging)
 
     if not data:
-        log.info("[#%s] tt@modules/getData.py: No Timetable Data(%s-%s, %s-%s-%s)"
+        log.info("[#%s] tt@get_data.py: No Timetable Data(%s-%s, %s-%s-%s)"
                  % (req_id, tt_grade, tt_class, date.year, date.month, date.day))
         return "등록된 데이터가 없습니다."
 
@@ -95,7 +96,7 @@ def tt(tt_grade: int, tt_class: int, date, req_id, debugging):
         else:
             body = body + "\n%s교시: %s" % (i+1, data[i])
 
-    log.info("[#%s] tt@modules/getData.py: Succeeded(%s-%s, %s-%s-%s)"
+    log.info("[#%s] tt@get_data.py: Succeeded(%s-%s, %s-%s-%s)"
              % (req_id, tt_grade, tt_class, date.year, date.month, date.day))
 
     return header + body
@@ -104,11 +105,11 @@ def tt(tt_grade: int, tt_class: int, date, req_id, debugging):
 # 학사일정 가져오기
 def schdl(year, month, date, req_id, debugging):
 
-    log.info("[#%s] schdl@modules/getData.py: Started Fetching Schedule Data(%s-%s-%s)" % (req_id, year, month, date))
+    log.info("[#%s] schdl@get_data.py: Started Fetching Schedule Data(%s-%s-%s)" % (req_id, year, month, date))
 
     # 파일 없으면 생성
     if not os.path.isfile('data/cache/Cal-%s-%s.json' % (year, month)):
-        scheduleParser.parse(year, month, req_id, debugging)
+        schedule_parser.parse(year, month, req_id, debugging)
 
     try:
         with open('data/cache/Cal-%s-%s.json' % (year, month),
@@ -117,15 +118,15 @@ def schdl(year, month, date, req_id, debugging):
     except FileNotFoundError:  # 파일 없을때
         if debugging:
             print("FileNotFound")
-        log.info("[#%s] schdl@modules/getData.py: No Schedule Data(%s-%s-%s)" % (req_id, year, month, date))
+        log.info("[#%s] schdl@get_data.py: No Schedule Data(%s-%s-%s)" % (req_id, year, month, date))
         return "일정이 없습니다."
 
     # 일정 있는지 확인
     if str(date) in data:
-        log.info("[#%s] schdl@modules/getData.py: Succeeded(%s-%s-%s)" % (req_id, year, month, date))
+        log.info("[#%s] schdl@get_data.py: Succeeded(%s-%s-%s)" % (req_id, year, month, date))
         return data[str(date)]
 
-    log.info("[#%s] schdl@modules/getData.py: No Schedule Data(%s-%s-%s)" % (req_id, year, month, date))
+    log.info("[#%s] schdl@get_data.py: No Schedule Data(%s-%s-%s)" % (req_id, year, month, date))
     return "일정이 없습니다."
 
 
@@ -135,7 +136,7 @@ def schdl_mass(start, end, req_id, debugging):
     between_date = list()
     schdl = list()
 
-    log.info("[#%s] schdl_mass@modules/getData.py: Started Fetching Mass Schedule Data(%s ~ %s)"
+    log.info("[#%s] schdl_mass@get_data.py: Started Fetching Mass Schedule Data(%s ~ %s)"
              % (req_id, start.date(), end.date()))
 
     delta = (end - start).days  # 시작일과 종료일 사이의 일수를 구함
@@ -149,7 +150,7 @@ def schdl_mass(start, end, req_id, debugging):
 
     for i in between_month:  # 대상월의 캐시가 있는지 확인, 없으면 만들기
         if not os.path.isfile('data/cache/Cal-%s-%s.json' % (i[0], i[1])):
-            scheduleParser.parse(i[0], i[1], req_id, debugging)
+            schedule_parser.parse(i[0], i[1], req_id, debugging)
 
     for i in between_date:
         try:  # 파일 열기, JSON 데이터를 딕셔너리형으로 변환
@@ -166,27 +167,27 @@ def schdl_mass(start, end, req_id, debugging):
         if str(i[2]) in data:  # 일정이 있는지 확인
             schdl.append((i[0], i[1], i[2], data[str(i[2])]))  # 년, 월, 일, 일정
 
-    log.info("[#%s] schdl_mass@modules/getData.py: Succeeded(%s ~ %s)" % (req_id, start.date(), end.date()))
+    log.info("[#%s] schdl_mass@get_data.py: Succeeded(%s ~ %s)" % (req_id, start.date(), end.date()))
 
     return schdl
 
 
 # 한강 수온 가져오기
 def wtemp(req_id, debugging):
-    log.info("[#%s] wtemp@modules/getData.py: Started Fetching Water Temperature Data" % req_id)
+    log.info("[#%s] wtemp@get_data.py: Started Fetching Water Temperature Data" % req_id)
     global date, temp
 
     def parse():
-        log.info("[#%s] wtemp@modules/getData.py: Started Parsing Water Temperature Data" % req_id)
+        log.info("[#%s] wtemp@get_data.py: Started Parsing Water Temperature Data" % req_id)
         try:
             global date, temp
-            parser = WTempParser.get(req_id, debugging)
+            parser = water_temp_parser.get(req_id, debugging)
             date = parser[0]
             temp = parser[1]
         except ConnectionError:
             return "한강 수온 서버에 연결하지 못했습니다.\n요청 ID: " + req_id
         except Exception as e:
-            log.err("[#%s] wtemp@modules/getData.py: Failed to Fetch Water Temperature Data because %s" % (req_id, e))
+            log.err("[#%s] wtemp@get_data.py: Failed to Fetch Water Temperature Data because %s" % (req_id, e))
             return "측정소 또는 서버 오류입니다."
         if not temp.isalpha():  # 무효값 걸러냄(값이 유효할 경우에만 캐싱)
             with open('data/cache/wtemp.json', 'w',
@@ -194,32 +195,32 @@ def wtemp(req_id, debugging):
                 json.dump({"timestamp": int(date.timestamp()), "temp": temp}, make_file, ensure_ascii=False)
                 print("File Created")
                 temp = temp + "°C"
-        log.info("[#%s] wtemp@modules/getData.py: Succeeded" % req_id)
+        log.info("[#%s] wtemp@get_data.py: Succeeded" % req_id)
 
     if os.path.isfile('data/cache/wtemp.json'):  # 캐시 있으면
         try:
-            log.info("[#%s] wtemp@modules/getData.py: Read Data in Cache" % req_id)
+            log.info("[#%s] wtemp@get_data.py: Read Data in Cache" % req_id)
             with open('data/cache/wtemp.json', encoding="utf-8") as data_file:  # 캐시 읽기
                 data = json.load(data_file, object_pairs_hook=OrderedDict)
         except Exception:  # 캐시 읽을 수 없으면
             try:
                 os.remove('data/cache/wtemp.json')  # 캐시 삭제
             except Exception:
-                log.err("[#%s] wtemp@modules/getData.py: Failed to Delete Cache" % req_id)
+                log.err("[#%s] wtemp@get_data.py: Failed to Delete Cache" % req_id)
                 return "측정소 또는 서버 오류입니다."
             parser_response = parse()  # 파싱
         # 캐시 유효하면
         if (datetime.datetime.now() - datetime.datetime.fromtimestamp(data["timestamp"])
                 < datetime.timedelta(minutes=76)):  # 실시간수질정보시스템상 자료처리 시간 고려, 유효기간 76분으로 설정
-            log.info("[#%s] wtemp@modules/getData.py: Use Data in Cache" % req_id)
+            log.info("[#%s] wtemp@get_data.py: Use Data in Cache" % req_id)
             date = datetime.datetime.fromtimestamp(data["timestamp"])
             temp = data["temp"] + "°C"
             parser_response = None
         else:  # 캐시 무효하면
-            log.info("[#%s] wtemp@modules/getData.py: Cache Expired" % req_id)
+            log.info("[#%s] wtemp@get_data.py: Cache Expired" % req_id)
             parser_response = parse()  # 파싱
     else:  # 캐시 없으면
-        log.info("[#%s] temp@modules/getData.py: No Cache" % req_id)
+        log.info("[#%s] temp@get_data.py: No Cache" % req_id)
         parser_response = parse()  # 파싱
 
     if isinstance(parser_response, str):
@@ -236,7 +237,7 @@ def wtemp(req_id, debugging):
         time = "오후 %s시" % (time - 12)
 
     body = "%s %s 측정자료:\n한강 수온은 %s 입니다." % (date.date(), time, temp)
-    log.info("[#%s] wtemp@modules/getData.py: Succeeded" % req_id)
+    log.info("[#%s] wtemp@get_data.py: Succeeded" % req_id)
 
     return body
 
@@ -245,15 +246,15 @@ def wtemp(req_id, debugging):
 def weather(date_ko, req_id, debugging):
     global weather_data
     now = datetime.datetime.now()
-    log.info("[#%s] weather@modules/getData.py: Started Fetching Weather Data" % req_id)
+    log.info("[#%s] weather@get_data.py: Started Fetching Weather Data" % req_id)
 
     # 날씨 파싱 후 캐싱
     def parse():
         global weather_data
 
-        log.info("[#%s] weather@modules/getData.py: Started Parsing Weather Data" % req_id)
+        log.info("[#%s] weather@get_data.py: Started Parsing Weather Data" % req_id)
 
-        weather_data = weatherParser.parse(req_id, debugging)
+        weather_data = weather_parser.parse(req_id, debugging)
 
         # 지금의 날짜와 시간까지만 취함
         weather_data["Timestamp"] = int(datetime.datetime(now.year, now.month, now.day, now.hour).timestamp())
@@ -263,30 +264,30 @@ def weather(date_ko, req_id, debugging):
             json.dump(weather_data, make_file, ensure_ascii=False)
             print("File Created")
 
-        log.info("[#%s] weather@modules/getData.py: Succeeded" % req_id)
+        log.info("[#%s] weather@get_data.py: Succeeded" % req_id)
 
     if os.path.isfile('data/cache/weather.json'):  # 캐시 있으면
         try:
-            log.info("[#%s] weather@modules/getData.py: Read Data in Cache" % req_id)
+            log.info("[#%s] weather@get_data.py: Read Data in Cache" % req_id)
             with open('data/cache/weather.json', encoding="utf-8") as data_file:  # 캐시 읽기
                 data = json.load(data_file, object_pairs_hook=OrderedDict)
         except Exception:  # 캐시 읽을 수 없으면
             try:
                 os.remove('data/cache/weather.json')  # 캐시 삭제
             except Exception:
-                log.err("[#%s] weather@modules/getData.py: Failed to Delete Cache" % req_id)
+                log.err("[#%s] weather@get_data.py: Failed to Delete Cache" % req_id)
                 return "측정소 또는 서버 오류입니다."
             parse()  # 파싱
         # 캐시 유효하면
         if now - datetime.datetime.fromtimestamp(data["Timestamp"]) < datetime.timedelta(hours=1):
             global weather_data
-            log.info("[#%s] weather@modules/getData.py: Use Data in Cache" % req_id)
+            log.info("[#%s] weather@get_data.py: Use Data in Cache" % req_id)
             weather_data = data
         else:  # 캐시 무효하면
-            log.info("[#%s] weather@modules/getData.py: Cache Expired" % req_id)
+            log.info("[#%s] weather@get_data.py: Cache Expired" % req_id)
             parse()  # 파싱
     else:  # 캐시 없으면
-        log.info("[#%s] weather@modules/getData.py: No Cache" % req_id)
+        log.info("[#%s] weather@get_data.py: No Cache" % req_id)
         parse()  # 파싱
 
     return_data = ("🌡️ %s 최소/최대 기온: %s℃/%s℃\n\n"
@@ -299,7 +300,7 @@ def weather(date_ko, req_id, debugging):
                       weather_data['temp'], weather_data['pty'], weather_data['pop'], weather_data['reh'])
                    )
 
-    log.info("[#%s] weather@modules/getData.py: Succeeded" % req_id)
+    log.info("[#%s] weather@get_data.py: Succeeded" % req_id)
 
     return return_data
 
@@ -316,7 +317,7 @@ def commits(req_id, debugging):
     except Exception as error:
         if debugging:
             print(error)
-        log.err("[#%s] commits@modules/getData.py: Failed to Parse Commits" % req_id)
+        log.err("[#%s] commits@get_data.py: Failed to Parse Commits" % req_id)
         return error
 
     # 마지막 커밋이 일어난 시간를 파싱함
@@ -331,7 +332,7 @@ def commits(req_id, debugging):
     messages = list(map(lambda loc: data[loc]["commit"]["message"], range(5)))
     # 리스트의 0번에 마지막 커밋 시간 삽입
     messages.insert(0, updated_at)
-    log.info("[#%s] commits@modules/getData.py: Succeeded" % req_id)
+    log.info("[#%s] commits@get_data.py: Succeeded" % req_id)
     return messages
 
 

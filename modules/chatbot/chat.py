@@ -5,7 +5,7 @@
 # ██║  ██║██████╔╝██║ ╚═╝ ██║███████╗██║  ██║███████╗
 # ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
 # Copyright 2019-2020, Hyungyo Seo
-# modules/chat.py - Skill 응답 데이터를 만드는 스크립트입니다.
+# chat.py - Skill 응답 데이터를 만드는 스크립트입니다.
 
 import datetime
 import hashlib
@@ -15,7 +15,9 @@ import time
 from itertools import groupby
 from threading import Thread
 import requests
-from modules import getData, user, log, LoL, conf, security
+from modules.chatbot import get_data, user
+from modules.common import security, conf, log
+from modules.common.parsers import league_of_legends_parser
 
 
 # Skill 응답용 JSON 생성
@@ -76,7 +78,7 @@ def router(platform: str, uid: str, intent: str, params: dict, req_id: str, debu
         elif 'Schedule' in intent:
             return schdl(params, req_id, debugging)
         elif 'WaterTemperature' in intent:
-            return [getData.wtemp(req_id, debugging)], None
+            return [get_data.wtemp(req_id, debugging)], None
         elif 'UserSettings' in intent:
             return user_settings(uid, req_id)
         elif 'ModifyUserInfo' in intent:
@@ -86,7 +88,7 @@ def router(platform: str, uid: str, intent: str, params: dict, req_id: str, debu
         else:
             return ["잘못된 요청입니다.\n요청 ID: " + req_id], None
     except Exception as e:
-        log.err("[#%s] router@modules/chat.py: Uncaught Error %s" % (req_id, e))
+        log.err("[#%s] router@chat.py: Uncaught Error %s" % (req_id, e))
         return ["알 수 없는 오류가 발생했습니다.\n요청 ID: " + req_id], None
 
 
@@ -99,11 +101,11 @@ def meal(params: dict, req_id: str, debugging: bool):
             date: datetime = params['date']
             if date.weekday() >= 5:  # 주말
                 return ["급식을 실시하지 않습니다. (주말)"], None
-            meal = getData.meal(date.year, date.month, date.day, req_id, debugging)
+            meal = get_data.meal(date.year, date.month, date.day, req_id, debugging)
             if not "message" in meal:  # 파서 메시지 있는지 확인, 없으면 만들어서 응답
                 return ["%s:\n\n%s\n\n열량: %s kcal" % (meal["date"], meal["menu"], meal["kcal"])], None
             if meal["message"] == "등록된 데이터가 없습니다.":
-                cal = getData.schdl(date.year, date.month, date.day, req_id, debugging)
+                cal = get_data.schdl(date.year, date.month, date.day, req_id, debugging)
                 if not cal == "일정이 없습니다.":
                     return ["급식을 실시하지 않습니다. (%s)" % cal], None
             return [meal["message"]], None
@@ -117,7 +119,7 @@ def meal(params: dict, req_id: str, debugging: bool):
 def timetable(platform: str, uid: str, params: dict, req_id: str, debugging: bool):
     suggest_to_register = False
     try:
-        log.info("[#%s] tt_registered@modules/chat.py: New Request" % req_id)
+        log.info("[#%s] tt_registered@chat.py: New Request" % req_id)
         print(params)
         if 'grade' in params and 'class' in params and params['grade'] and params['class']:
             try:
@@ -152,7 +154,7 @@ def timetable(platform: str, uid: str, params: dict, req_id: str, debugging: boo
         if isinstance(params['date'], datetime.datetime):
             date: datetime = params['date']
             if suggest_to_register:
-                return [getData.tt(tt_grade, tt_class, date, req_id, debugging), {
+                return [get_data.tt(tt_grade, tt_class, date, req_id, debugging), {
                     "type": "card",
                     "title": "방금 입력하신 정보를 저장할까요?",
                     "body": "학년/반 정보를 등록하시면 다음부터 더 빠르고 편하게 이용하실 수 있습니다.",
@@ -165,7 +167,7 @@ def timetable(platform: str, uid: str, params: dict, req_id: str, debugging: boo
                     ]
                 }], None
             else:
-                return [getData.tt(tt_grade, tt_class, date, req_id, debugging)], None
+                return [get_data.tt(tt_grade, tt_class, date, req_id, debugging)], None
         else:
             return ["정확한 날짜를 입력해주세요.\n현재 시간표조회에서는 여러날짜 조회를 지원하지 않습니다."], None
     except ConnectionError:
@@ -176,7 +178,7 @@ def timetable(platform: str, uid: str, params: dict, req_id: str, debugging: boo
 def schdl(params: dict, req_id: str, debugging: bool):
     global msg
     try:
-        log.info("[#%s] cal@modules/chat.py: New Request" % req_id)
+        log.info("[#%s] cal@chat.py: New Request" % req_id)
         if "date" in params:
             if not params['date']:
                 return ["언제의 학사일정을 조회하시겠어요?"], None
@@ -185,10 +187,10 @@ def schdl(params: dict, req_id: str, debugging: bool):
                 try:
                     date: datetime = params["date"]
                 except Exception:
-                    log.err("[#%s] cal@modules/chat.py: Error while Parsing Date" % req_id)
+                    log.err("[#%s] cal@chat.py: Error while Parsing Date" % req_id)
                     return ["오류가 발생했습니다.\n요청 ID: " + req_id], None
 
-                prsnt_schdl = getData.schdl(date.year, date.month, date.day, req_id, debugging)
+                prsnt_schdl = get_data.schdl(date.year, date.month, date.day, req_id, debugging)
 
                 prsnt_schdl = prsnt_schdl
                 if prsnt_schdl:
@@ -204,12 +206,12 @@ def schdl(params: dict, req_id: str, debugging: bool):
                 try:
                     start: datetime = params['date'][0]  # 시작일 파싱
                 except Exception:
-                    log.err("[#%s] cal@modules/chat.py: Error while Parsing StartDate" % req_id)
+                    log.err("[#%s] cal@chat.py: Error while Parsing StartDate" % req_id)
                     return ["오류가 발생했습니다.\n요청 ID: " + req_id], None
                 try:
                     end: datetime = params['date'][1]  # 종료일 파싱
                 except Exception:
-                    log.err("[#%s] cal@modules/chat.py: Error while Parsing EndDate" % req_id)
+                    log.err("[#%s] cal@chat.py: Error while Parsing EndDate" % req_id)
                     return ["오류가 발생했습니다.\n요청 ID: " + req_id], None
 
                 if (end - start).days > 90:  # 90일 이상을 조회요청한 경우,
@@ -220,7 +222,7 @@ def schdl(params: dict, req_id: str, debugging: bool):
                 else:
                     head = "%s부터 %s까지 조회합니다.\n\n" % (start.date(), end.date())
 
-                schdls = getData.schdl_mass(start, end, req_id, debugging)
+                schdls = get_data.schdl_mass(start, end, req_id, debugging)
                 # 년, 월, 일, 일정 정보를 담은 튜플이 리스트로 묶여서 반환됨
 
                 # body 쓰기, 연속되는 일정은 묶어 처리함
@@ -241,7 +243,7 @@ def schdl(params: dict, req_id: str, debugging: bool):
                 # 기간 조회 끝
 
         else:  # 아무런 파라미터도 넘겨받지 못한 경우
-            log.info("[#%s] cal@modules/chat.py: No Parameter" % req_id)
+            log.info("[#%s] cal@chat.py: No Parameter" % req_id)
             return ["언제의 학사일정을 조회하시겠어요?"], None
 
         return [msg], None
@@ -251,7 +253,7 @@ def schdl(params: dict, req_id: str, debugging: bool):
 
 # 급식봇 브리핑
 def briefing(uid: str, req_id: str, debugging: bool):
-    log.info("[#%s] briefing@modules/chat.py: New Request" % req_id)
+    log.info("[#%s] briefing@chat.py: New Request" % req_id)
     global briefing_header, hd_err, briefing_schdl, briefing_weather, briefing_meal, briefing_meal_ga, briefing_tt
     briefing_header = "알 수 없는 오류로 헤더를 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
     briefing_schdl = "알 수 없는 오류로 학사일정을 불러올 수 없었습니다.\n나중에 다시 시도해 보세요."
@@ -269,7 +271,7 @@ def briefing(uid: str, req_id: str, debugging: bool):
         date = datetime.datetime.now()
         date_ko = "오늘"
 
-    log.info("[#%s] briefing@modules/chat.py: Date: %s" % (req_id, date))
+    log.info("[#%s] briefing@chat.py: Date: %s" % (req_id, date))
 
     def logging_time(original_fn):
         def wrapper_fn(*args, **kwargs):
@@ -289,7 +291,7 @@ def briefing(uid: str, req_id: str, debugging: bool):
     def f_header():
         global briefing_header, hd_err
         if date.weekday() >= 5:  # 주말이면
-            log.info("[#%s] briefing@modules/chat.py: Weekend" % req_id)
+            log.info("[#%s] briefing@chat.py: Weekend" % req_id)
             hd_err = "%s은 주말 입니다." % date_ko
         else:
             briefing_header = "%s은 %s(%s) 입니다." % (date_ko, date.date().isoformat(), wday(date))
@@ -300,9 +302,9 @@ def briefing(uid: str, req_id: str, debugging: bool):
     def f_cal():
         global briefing_schdl
         try:
-            briefing_schdl = getData.schdl(date.year, date.month, date.day, req_id, debugging)
+            briefing_schdl = get_data.schdl(date.year, date.month, date.day, req_id, debugging)
             if not briefing_schdl:
-                log.info("[#%s] briefing@modules/chat.py: No Schedule" % req_id)
+                log.info("[#%s] briefing@chat.py: No Schedule" % req_id)
                 briefing_schdl = "%s은 학사일정이 없습니다." % date_ko
             else:
                 briefing_schdl = "%s 학사일정:\n%s" % (date_ko, briefing_schdl)
@@ -315,7 +317,7 @@ def briefing(uid: str, req_id: str, debugging: bool):
     def f_weather():
         global briefing_weather
         try:
-            briefing_weather = getData.weather(date_ko, req_id, debugging)
+            briefing_weather = get_data.weather(date_ko, req_id, debugging)
         except ConnectionError:
             briefing_weather = "날씨 서버에 연결하지 못했습니다.\n나중에 다시 시도해 보세요."
 
@@ -325,13 +327,13 @@ def briefing(uid: str, req_id: str, debugging: bool):
     def f_meal():
         global briefing_meal, briefing_meal_ga
         try:
-            meal = getData.meal(date.year, date.month, date.day, req_id, debugging)
+            meal = get_data.meal(date.year, date.month, date.day, req_id, debugging)
             if not "message" in meal:  # 파서 메시지 있는지 확인, 없으면 만들어서 응답
                 briefing_meal_ga = "%s 급식은 %s 입니다." % (
                     date_ko, re.sub(r'\[[^\]]*\]', '', meal["menu"].replace('\n', '').replace(',', ', ').replace('⭐', '')))
                 briefing_meal = "%s 급식:\n%s" % (date_ko, meal["menu"].replace('\n\n', '\n'))
             if meal["message"] == "등록된 데이터가 없습니다.":
-                log.info("[#%s] briefing@modules/chat.py: No Meal" % req_id)
+                log.info("[#%s] briefing@chat.py: No Meal" % req_id)
                 briefing_meal_ga = date_ko + "은 급식을 실시하지 않습니다."
                 briefing_meal = date_ko + "은 급식을 실시하지 않습니다."
         except ConnectionError:
@@ -348,18 +350,18 @@ def briefing(uid: str, req_id: str, debugging: bool):
             tt_class = user_data[1]
 
             if tt_grade is not None or tt_class is not None:  # 사용자 정보 있을 때
-                tt = getData.tt(tt_grade, tt_class, date, req_id, debugging)
+                tt = get_data.tt(tt_grade, tt_class, date, req_id, debugging)
                 if tt == "등록된 데이터가 없습니다.":
                     briefing_tt = "등록된 시간표가 없습니다."
                 else:
                     briefing_tt = "%s 시간표:\n%s" % (date_ko, tt.split('):\n\n')[1])  # 헤더부분 제거
             else:
-                log.info("[#%s] briefing@modules/chat.py: Non-Registered User" % req_id)
+                log.info("[#%s] briefing@chat.py: Non-Registered User" % req_id)
                 briefing_tt = "등록된 사용자만 시간표를 볼 수 있습니다."
         except ConnectionError:
             briefing_tt = "시간표 서버에 연결하지 못했습니다.\n나중에 다시 시도해 보세요."
         except Exception as e:
-            log.err("[#%s] briefing@modules/chat.py: Failed to Fetch Timetable because %s" % (req_id, e))
+            log.err("[#%s] briefing@chat.py: Failed to Fetch Timetable because %s" % (req_id, e))
 
     # 쓰레드 정의
     th_header = Thread(target=f_header)
@@ -391,18 +393,18 @@ def briefing(uid: str, req_id: str, debugging: bool):
 
 
 def lol(params, req_id, debugging):
-    log.info("[#%s] lol@modules/chat.py: New Request" % req_id)
+    log.info("[#%s] lol@chat.py: New Request" % req_id)
     try:
         summoner_name = params["summonerName"]
     except KeyError:
         return ["소환사명을 입력해주세요."], None
     except Exception:
-        log.err("[#%s] lol@modules/chat.py: Error while Parsing Summoner Name" % req_id)
+        log.err("[#%s] lol@chat.py: Error while Parsing Summoner Name" % req_id)
         return ["오류가 발생했습니다.\n요청 ID: " + req_id], None
 
     # 소환사명 16자 초과하면
     if len(summoner_name) > 16:
-        log.info("[#%s] lol@modules/chat.py: Summoner Name is Too Long" % req_id)
+        log.info("[#%s] lol@chat.py: Summoner Name is Too Long" % req_id)
 
         return [{
             "type": "card",
@@ -413,15 +415,15 @@ def lol(params, req_id, debugging):
         }], None
 
     try:
-        summoner_data = LoL.parse(summoner_name, req_id, debugging)
+        summoner_data = league_of_legends_parser.parse(summoner_name, req_id, debugging)
     except Exception as e:
         if "timed out" in str(e):
             return ["라이엇 서버에 연결하지 못했습니다.\n요청 ID: " + req_id], None
-        log.err("[#%s] lol@modules/chat.py: Error while Parsing Summoner Data because %s" % (req_id, e))
+        log.err("[#%s] lol@chat.py: Error while Parsing Summoner Data because %s" % (req_id, e))
         return ["오류가 발생했습니다.\n요청 ID: " + req_id], None
 
     if summoner_data == 'Invalid Token':
-        log.err("[#%s] lol@modules/chat.py: Invalid Token" % req_id)
+        log.err("[#%s] lol@chat.py: Invalid Token" % req_id)
         return ["오류가 발생했습니다.\n요청 ID: " + req_id], None
 
     if summoner_data:
@@ -542,7 +544,7 @@ def notify(reqdata, req_id, debugging):
         return {"message": "올바른 요청이 아님"}, 400
     if now.weekday() >= 5:
         return {"message": "알림미발송(주말)"}
-    meal = getData.meal(now.year, now.month, now.day, req_id, debugging)
+    meal = get_data.meal(now.year, now.month, now.day, req_id, debugging)
     if not "menu" in meal:
         return {"message": "알림미발송(정보없음)"}
     reqbody = {

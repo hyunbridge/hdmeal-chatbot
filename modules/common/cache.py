@@ -5,15 +5,16 @@
 # ██║  ██║██████╔╝██║ ╚═╝ ██║███████╗██║  ██║███████╗
 # ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
 # Copyright 2019-2020, Hyungyo Seo
-# modules/cache.py - 캐시를 관리하는 스크립트입니다.
+# cache.py - 캐시를 관리하는 스크립트입니다.
 
 import datetime
 import json
 import os
 from collections import OrderedDict
 from threading import Thread
-from modules import TTParser, getData
-from modules import log
+from modules.chatbot import get_data
+from modules.common import log
+from modules.common.parsers import timetable_parser
 
 
 # 캐시 비우기
@@ -24,13 +25,13 @@ def purge(req_id, debugging):
         for file in file_list:
             os.remove("data/cache/" + file)
     except Exception as error:
-        log.err("[#%s] purge@modules/cache.py: Failed" % req_id)
+        log.err("[#%s] purge@cache.py: Failed" % req_id)
         if debugging:
             dict_data["status"] = error
         dict_data["status"] = "Error"
         return dict_data
     dict_data["status"] = "OK"
-    log.info("[#%s] purge@modules/cache.py: Succeeded" % req_id)
+    log.info("[#%s] purge@cache.py: Succeeded" % req_id)
     return dict_data
 
 
@@ -72,7 +73,7 @@ def get(req_id, debugging):
                 return_data = "%s\n날씨 캐시 만료까지 %s분 남음" % (return_data, time_left)
             else:
                 return_data = "%s\n날씨 캐시 만료됨" % return_data
-    log.info("[#%s] get@modules/cache.py: Succeeded" % req_id)
+    log.info("[#%s] get@cache.py: Succeeded" % req_id)
     return return_data
 
 
@@ -92,19 +93,19 @@ def health_check(req_id, debugging):
                     status_tt = "Vaild (Up to %s Min(s))" % time_left
                 else:
                     try:
-                        TTParser.parse(1, 1, now.year, now.month, now.day, req_id, debugging)
+                        timetable_parser.parse(1, 1, now.year, now.month, now.day, req_id, debugging)
                         status_tt = "Expired (Regenerated)"
                     except Exception as e:
                         log.err(
-                            "[#%s] health_check@modules/cache.py: Failed to Regenerate Cache(Timetable) because %s" %
+                            "[#%s] health_check@cache.py: Failed to Regenerate Cache(Timetable) because %s" %
                             (req_id, e))
                         status_tt = "Expired (Failed)"
         else:
             try:
-                TTParser.parse(1, 1, now.year, now.month, now.day, req_id, debugging)
+                timetable_parser.parse(1, 1, now.year, now.month, now.day, req_id, debugging)
                 status_tt = "NotFound (Regenerated)"
             except Exception as e:
-                log.err("[#%s] health_check@modules/cache.py: Failed to Regenerate Cache(Timetable) because %s" %
+                log.err("[#%s] health_check@cache.py: Failed to Regenerate Cache(Timetable) because %s" %
                         (req_id, e))
                 status_tt = "NotFound (Failed)"
 
@@ -120,20 +121,20 @@ def health_check(req_id, debugging):
                     status_wtemp = "Vaild (Up to %s Min(s))" % time_left
                 else:
                     try:
-                        getData.wtemp(req_id, debugging)
+                        get_data.wtemp(req_id, debugging)
                         status_wtemp = "Expired (Regenerated)"
                     except Exception as e:
                         log.err(
-                            "[#%s] health_check@modules/cache.py: Failed to Regenerate Cache(WTemp) because %s" %
+                            "[#%s] health_check@cache.py: Failed to Regenerate Cache(WTemp) because %s" %
                             (req_id, e))
                         status_wtemp = "Expired (Failed)"
         else:
             try:
-                getData.wtemp(req_id, debugging)
+                get_data.wtemp(req_id, debugging)
                 status_wtemp = "NotFound (Regenerated)"
             except Exception as e:
                 log.err(
-                    "[#%s] health_check@modules/cache.py: Failed to Regenerate Cache(WTemp) because %s" %
+                    "[#%s] health_check@cache.py: Failed to Regenerate Cache(WTemp) because %s" %
                     (req_id, e))
                 status_wtemp = "NotFound (Failed)"
 
@@ -148,20 +149,20 @@ def health_check(req_id, debugging):
                     status_weather = "Vaild (Up to %s Min(s))" % time_left
                 else:
                     try:
-                        getData.weather(None, req_id, debugging)
+                        get_data.weather(None, req_id, debugging)
                         status_weather = "Expired (Regenerated)"
                     except Exception as e:
                         log.err(
-                            "[#%s] health_check@modules/cache.py: Failed to Regenerate Cache(Weather) because %s" %
+                            "[#%s] health_check@cache.py: Failed to Regenerate Cache(Weather) because %s" %
                             (req_id, e))
                         status_weather = "Expired (Failed)"
         else:
             try:
-                getData.weather(None, req_id, debugging)
+                get_data.weather(None, req_id, debugging)
                 status_weather = "NotFound (Regenerated)"
             except Exception as e:
                 log.err(
-                    "[#%s] health_check@modules/cache.py: Failed to Regenerate Cache(Weather) because %s" %
+                    "[#%s] health_check@cache.py: Failed to Regenerate Cache(Weather) because %s" %
                     (req_id, e))
                 status_weather = "NotFound (Failed)"
 

@@ -5,30 +5,30 @@
 # ██║  ██║██████╔╝██║ ╚═╝ ██║███████╗██║  ██║███████╗
 # ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
 # Copyright 2019-2020, Hyungyo Seo
-# modules/weatherParser.py - 날씨정보를 파싱해오는 스크립트입니다.
+# weather_parser.py - 날씨정보를 파싱해오는 스크립트입니다.
 
 import urllib.error
 import urllib.request
 import xml.etree.ElementTree
-from modules import log, conf
+from modules.common import conf, log
 
 region = conf.configs['School']['KMAZone']
 
 
 def parse(req_id, debugging):
 
-    log.info("[#%s] parse@modules/weatherParser.py: Started Parsing Weather" % req_id)
+    log.info("[#%s] parse@weather_parser.py: Started Parsing Weather" % req_id)
 
     try:
         url = urllib.request.urlopen("https://www.kma.go.kr/wid/queryDFSRSS.jsp"
                                      "?zone=%s" % region, timeout=2)
     except (urllib.error.HTTPError, urllib.error.URLError) as e:
-        log.err("[#%s] parse@modules/weatherParser.py: Failed to Parse Weather because %s" % (req_id, e))
+        log.err("[#%s] parse@weather_parser.py: Failed to Parse Weather because %s" % (req_id, e))
         raise ConnectionError
     except Exception as error:
         if debugging:
             print(error)
-        log.err("[#%s] parse@modules/weatherParser.py: Failed" % req_id)
+        log.err("[#%s] parse@weather_parser.py: Failed" % req_id)
         return error
 
     data = xml.etree.ElementTree.fromstring(url.read().decode('utf-8')).findall('.//data')
@@ -86,15 +86,15 @@ def parse(req_id, debugging):
         weather['sky'] = sky[int(weather['sky'])-1]  # 1부터 시작
     else:
         weather['sky'] = '⚠ 오류'
-        log.err("[#%s] parse@modules/weatherParser.py: Failed to Parse Sky" % req_id)
+        log.err("[#%s] parse@weather_parser.py: Failed to Parse Sky" % req_id)
 
     # 강수 형태 대응값 적용
     if int(weather['pty']) < 4:
         weather['pty'] = pty[int(weather['pty'])]
     else:
         weather['pty'] = '⚠ 오류'
-        log.err("[#%s] parse@modules/weatherParser.py: Failed to Parse Precipitation Type" % req_id)
-    log.info("[#%s] parse@modules/weatherParser.py: Succeeded" % req_id)
+        log.err("[#%s] parse@weather_parser.py: Failed to Parse Precipitation Type" % req_id)
+    log.info("[#%s] parse@weather_parser.py: Succeeded" % req_id)
     return weather
 
 # 디버그

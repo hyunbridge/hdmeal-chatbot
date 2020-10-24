@@ -5,7 +5,7 @@
 # ██║  ██║██████╔╝██║ ╚═╝ ██║███████╗██║  ██║███████╗
 # ╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝
 # Copyright 2019-2020, Hyungyo Seo
-# modules/mealParser.py - NEIS 서버에 접속하여 급식정보를 파싱해오는 스크립트입니다.
+# menu_parser.py - NEIS 서버에 접속하여 급식정보를 파싱해오는 스크립트입니다.
 
 import html
 import json
@@ -14,8 +14,7 @@ import urllib.error
 import urllib.request
 from collections import OrderedDict
 from bs4 import BeautifulSoup
-from modules import log, conf
-
+from modules.common import conf, log
 
 school_code = conf.configs['School']['NEIS']['Code']
 school_kind = conf.configs['School']['NEIS']['Kind']
@@ -27,7 +26,7 @@ def parse(year, month, day, req_id, debugging):
     month = str(month).zfill(2)
     day = str(day).zfill(2)
 
-    log.info("[#%s] parse@modules/mealParser.py: Started Parsing Menu(%s-%s-%s)" % (req_id, year, month, day))
+    log.info("[#%s] parse@menu_parser.py: Started Parsing Menu(%s-%s-%s)" % (req_id, year, month, day))
 
     try:
         url = urllib.request.urlopen(neis_baseurl+"sts_sci_md01_001.do?"
@@ -38,7 +37,7 @@ def parse(year, month, day, req_id, debugging):
                                      "&schYmd=%s.%s.%s" % (school_code, school_kind, school_kind,
                                                            year, month, day), timeout=2)
     except (urllib.error.HTTPError, urllib.error.URLError) as e:
-        log.err("[#%s] parse@modules/mealParser.py: Failed to Parse Menu(%s-%s-%s) because %s" % (
+        log.err("[#%s] parse@menu_parser.py: Failed to Parse Menu(%s-%s-%s) because %s" % (
             req_id, year, month, day, e))
         raise ConnectionError
     data = BeautifulSoup(url, 'html.parser')
@@ -56,10 +55,10 @@ def parse(year, month, day, req_id, debugging):
                     print(loc)
                     print(date)
     except IndexError:
-        log.err("[#%s] parse@modules/mealParser.py: Failed to Parse Menu(%s-%s-%s)" % (req_id, year, month, day))
+        log.err("[#%s] parse@menu_parser.py: Failed to Parse Menu(%s-%s-%s)" % (req_id, year, month, day))
         return "IndexError"
     if not loc:
-        log.err("[#%s] parse@modules/mealParser.py: Failed to Parse Menu(%s-%s-%s)" % (req_id, year, month, day))
+        log.err("[#%s] parse@menu_parser.py: Failed to Parse Menu(%s-%s-%s)" % (req_id, year, month, day))
         return ""
 
     # 알레르기정보 선언
@@ -77,11 +76,11 @@ def parse(year, month, day, req_id, debugging):
     try:
         menu = str(menu[loc]).replace('<br/>', '.\n')  # 줄바꿈 처리
     except IndexError:
-        log.err("[#%s] parse@modules/mealParser.py: Failed to Parse Menu(%s-%s-%s)" % (req_id, year, month, day))
+        log.err("[#%s] parse@menu_parser.py: Failed to Parse Menu(%s-%s-%s)" % (req_id, year, month, day))
         return "IndexError"
     menu = html.unescape(re.sub('<.+?>', '', menu).strip())  # 태그 및 HTML 엔티티 처리
     if menu == "":
-        log.info("[#%s] parse@modules/mealParser.py: No Menu(%s-%s-%s)" % (req_id, year, month, day))
+        log.info("[#%s] parse@menu_parser.py: No Menu(%s-%s-%s)" % (req_id, year, month, day))
         return "NoData"
     for i in range(18):
         menu = menu.replace(allergy_filter[i], allergy_string[i]).replace('.\n', ',\n')  # 알러지 처리 및 콤마 찍기
@@ -121,7 +120,7 @@ def parse(year, month, day, req_id, debugging):
         json.dump(return_data, make_file, ensure_ascii=False)
         print("File Created")
 
-    log.info("[#%s] parse@modules/mealParser.py: Succeeded(%s-%s-%s)" % (req_id, year, month, day))
+    log.info("[#%s] parse@menu_parser.py: Succeeded(%s-%s-%s)" % (req_id, year, month, day))
 
     return 0
 
