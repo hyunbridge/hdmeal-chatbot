@@ -12,8 +12,7 @@ import json
 import os
 from collections import OrderedDict
 from threading import Thread
-from modules.chatbot import get_data
-from modules.common import log
+from modules.common import log, get_data
 from modules.common.parsers import timetable_parser
 
 

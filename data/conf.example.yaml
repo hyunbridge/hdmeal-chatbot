@@ -56,6 +56,7 @@ Misc:
   Settings:
     Secret: SuperSecret
     BaseURL: https://example.com/
+    LogLevel: DEBUG  # DEBUG, INFO, WARNING, ERROR, CRITICAL
     Access-Control-Allow-Origin: "*"
   # 롤
   LoL:
