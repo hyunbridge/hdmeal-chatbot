@@ -12,8 +12,7 @@ import re
 from datetime import datetime, timedelta
 import facebook
 from PIL import Image, ImageDraw, ImageFont
-from modules.common import log
-from modules.chatbot import get_data
+from modules.common import log, get_data
 
 
 def publish(fb_token, req_id, debugging):

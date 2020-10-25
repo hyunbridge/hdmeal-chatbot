@@ -9,14 +9,12 @@
 
 import datetime
 import hashlib
-import json
 import re
 import time
 from itertools import groupby
 from threading import Thread
-import requests
-from modules.chatbot import get_data, user
-from modules.common import security, conf, log
+from modules.chatbot import user
+from modules.common import security, conf, log, get_data
 from modules.common.parsers import league_of_legends_parser
 
 
@@ -528,48 +526,6 @@ def modify_user_info(params: dict, uid: str, req_id: str, debugging: bool):
     except ValueError:
         return ["올바른 숫자를 입력해 주세요."], None
     return ["저장되었습니다."], None
-
-
-def notify(reqdata, req_id, debugging):
-    now = datetime.datetime.now()
-    try:
-        onesignal_app_id = json.loads(reqdata)["OneSignal"]["AppID"]
-        onesignal_api_key = json.loads(reqdata)["OneSignal"]["APIKey"]
-    except Exception:
-        return {"message": "OneSignal AppID 또는 APIKey 없음"}, 401
-    try:
-        title = json.loads(reqdata)["Title"]
-        url = json.loads(reqdata)["URL"]
-    except Exception:
-        return {"message": "올바른 요청이 아님"}, 400
-    if now.weekday() >= 5:
-        return {"message": "알림미발송(주말)"}
-    meal = get_data.meal(now.year, now.month, now.day, req_id, debugging)
-    if not "menu" in meal:
-        return {"message": "알림미발송(정보없음)"}
-    reqbody = {
-        "app_id": onesignal_app_id,
-        "headings": {
-            "en": title
-        },
-        "contents": {
-            "en": meal["date"] + " 급식:\n" + re.sub(r'\[[^\]]*\]', '', meal["menu"]).replace('⭐', '')
-        },
-        "url": url,
-        "included_segments": [
-            "All"
-        ]
-    }
-    reqheader = {
-        "Content-Type": "application/json",
-        "Authorization": "Basic " + onesignal_api_key
-    }
-    try:
-        request = requests.post("https://onesignal.com/api/v1/notifications", data=json.dumps(reqbody),
-                                headers=reqheader)
-    except Exception as error:
-        return error
-    return {"message": "성공"}
 
 
 # 디버그

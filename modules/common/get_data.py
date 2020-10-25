@@ -16,6 +16,24 @@ from modules.common import log
 from modules.common.parsers import menu_parser, water_temp_parser, schedule_parser, weather_parser, timetable_parser
 
 
+def wday(weekday):
+    if weekday == 0:
+        return "월"
+    elif weekday == 1:
+        return "화"
+    elif weekday == 2:
+        return "수"
+    elif weekday == 3:
+        return "목"
+    elif weekday == 4:
+        return "금"
+    elif weekday == 5:
+        return "토"
+    elif weekday == 6:
+        return "일"
+    else:
+        return "오류"
+
 # 급식정보 가져오기
 def meal(year, month, date, req_id, debugging):
     # 자료형 변환
@@ -64,23 +82,6 @@ def tt(tt_grade: int, tt_class: int, date, req_id, debugging):
                  % (req_id, tt_grade, tt_class, date.year, date.month, date.day))
         return "등록된 데이터가 없습니다."
 
-    def wday(tt_weekday):
-        if tt_weekday == 0:
-            return "월"
-        elif tt_weekday == 1:
-            return "화"
-        elif tt_weekday == 2:
-            return "수"
-        elif tt_weekday == 3:
-            return "목"
-        elif tt_weekday == 4:
-            return "금"
-        elif tt_weekday == 5:
-            return "토"
-        elif tt_weekday == 6:
-            return "일"
-        else:
-            return "오류"
 
     # 헤더 작성. n학년 n반, yyyy-mm-dd(요일): 형식
     header = ("%s학년 %s반,\n%s(%s):\n" % (
