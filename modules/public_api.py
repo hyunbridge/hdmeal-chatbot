@@ -8,19 +8,29 @@
 # public_api.py - 공개 API 기능을 담당하는 스크립트입니다.
 
 import datetime
-from modules.common import get_data
+from modules.common import get_data, conf
+
 
 class HDMBadRequestError(Exception):
     pass
 
 
+classes = int(conf.configs['School']['Classes'])
+
+
 def webapp(request, req_id: str, debugging: bool):
     try:
         grade, class_ = int(request.args["grade"]), int(request.args['class'])
+        if not 3 >= grade >= 1:
+            raise HDMBadRequestError('grade must be greater than or equal to 1 and less than or equal to 3')
+        if not classes >= class_ >= 1:
+            raise HDMBadRequestError('class must be greater than or equal to 1 and less than or equal to %d' % classes)
     except KeyError:
         return {'status': 403, 'message': 'Missing Parameters: grade, class'}, 403
     except ValueError:
         return {'status': 403, 'message': 'Bad Format: grade, class'}, 403
+    except HDMBadRequestError as e:
+        return {'status': 403, 'message': str(e)}, 403
     try:
         if 'date' in request.args:
             date = [datetime.datetime.strptime(request.args['date'], '%Y-%m-%d')]
@@ -64,7 +74,7 @@ def webapp(request, req_id: str, debugging: bool):
                 timetable = timetable.split('):\n\n')[1]
         except:
             timetable = '서버 오류가 발생했습니다.'
-        output['%d-%d-%d(%s)' % (i.year, i.month, i.day, get_data.wday(i.weekday()))] = {
+        output['%04d-%02d-%02d(%s)' % (i.year, i.month, i.day, get_data.wday(i.weekday()))] = {
             'schedule': schedule,
             'menu': menu,
             'timetable': timetable
