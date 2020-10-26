@@ -73,6 +73,11 @@ def auth(original_fn):
 # Flask 인스턴스 생성
 app = Flask(__name__)
 api = Api(app)
+
+api.app.config['RESTFUL_JSON'] = {
+    'ensure_ascii': False
+}
+
 log.info("Server Started")
 
 
