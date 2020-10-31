@@ -26,11 +26,11 @@ def webapp(request, req_id: str, debugging: bool):
         if not classes >= class_ >= 1:
             raise HDMBadRequestError('class must be greater than or equal to 1 and less than or equal to %d' % classes)
     except KeyError:
-        return {'status': 403, 'message': 'Missing Parameters: grade, class'}, 403
+        return {'status': 400, 'message': 'Missing Parameters: grade, class'}, 400
     except ValueError:
-        return {'status': 403, 'message': 'Bad Format: grade, class'}, 403
+        return {'status': 400, 'message': 'Bad Format: grade, class'}, 400
     except HDMBadRequestError as e:
-        return {'status': 403, 'message': str(e)}, 403
+        return {'status': 400, 'message': str(e)}, 400
     try:
         if 'date' in request.args:
             date = [datetime.datetime.strptime(request.args['date'], '%Y-%m-%d')]
@@ -45,12 +45,12 @@ def webapp(request, req_id: str, debugging: bool):
             date = [date_from + datetime.timedelta(days=i) for i in range(delta + 1)]
         print(date)
     except KeyError:
-        return {'status': 403, 'message': 'Missing Parameters: date or (date_from, date_to)'}, 403
+        return {'status': 400, 'message': 'Missing Parameters: date or (date_from, date_to)'}, 400
     except ValueError:
-        return {'status': 403, 'message': 'Bad Format: date'}, 403
+        return {'status': 400, 'message': 'Bad Format: date'}, 400
     except HDMBadRequestError as e:
-        return {'status': 403, 'message': str(e)}, 403
-    output = {}
+        return {'status': 400, 'message': str(e)}, 400
+    output = []
     for i in date:
         try:
             schedule = get_data.schdl(i.year, i.month, i.day, req_id, debugging)
@@ -74,9 +74,9 @@ def webapp(request, req_id: str, debugging: bool):
                 timetable = timetable.split('):\n\n')[1]
         except:
             timetable = '서버 오류가 발생했습니다.'
-        output['%04d-%02d-%02d(%s)' % (i.year, i.month, i.day, get_data.wday(i.weekday()))] = {
+        output.append({
             'schedule': schedule,
             'menu': menu,
             'timetable': timetable
-        }
+        })
     return output
