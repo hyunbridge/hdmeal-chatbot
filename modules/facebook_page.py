@@ -8,7 +8,6 @@
 # facebook_page.py - 페이스북 페이지에 급식정보를 발행하는 스크립트입니다.
 
 import io
-import re
 from datetime import datetime, timedelta
 import facebook
 from PIL import Image, ImageDraw, ImageFont
@@ -39,7 +38,7 @@ def publish(fb_token, req_id, debugging):
             return {"Parser": "ERROR"}, 500
     else:
         date = meal["date"]  # 날짜 - YYYY-MM-DD(Weekday)
-        menu = re.sub(r'\[[^\]]*\]', '', meal["menu"]).split('\n')  # 괄호(알레르기정보) 제거, 행별로 나누기
+        menu = [i[0] for i in meal["menu"]]
         kcal = meal["kcal"] + " kcal"  # 열량값에 단위(kcal)붙이기
 
     # 템플릿

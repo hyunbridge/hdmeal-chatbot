@@ -107,7 +107,6 @@ def meal(uid: str, params: dict, req_id: str, debugging: bool):
             # 사용자 설정 불러오기
             user_preferences = user.get_user(uid, req_id, debugging)[2]
             meal = get_data.meal(date.year, date.month, date.day, req_id, debugging)
-            print(user_preferences['AllergyInfo'])
             if user_preferences['AllergyInfo'] == 'None':
                 menus = [i[0] for i in meal["menu"]]
             elif user_preferences['AllergyInfo'] == 'FullText':
