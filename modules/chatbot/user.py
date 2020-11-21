@@ -28,6 +28,13 @@ classes = int(conf.configs['School']['Classes'])
 # 오류 메세지
 errors_conf = conf.configs['Misc']['Errors']
 
+# 설정 기본값
+preferences_default = {
+    'AllergyInfo': 'Number'
+}
+preferences_values = {
+    'AllergyInfo': ['None', 'Number', 'FullText']
+}
 
 # 오류 발생 처리
 def hdm_error(code: str):
@@ -49,14 +56,14 @@ def get_user(uid: str, req_id: str, debugging: bool):
         if debugging:
             print(data)
         if not data:  # 사용자 정보 없을 때
-            return_data = [None, None]
+            return_data = [None, None, {}]
             log.info("[#%s] get_user@user.py: No User Info" % req_id)
             return return_data
         if data['Grade'] and data['Class']:  # 사용자 정보 있을 때
-            return_data = [data['Grade'], data['Class']]
+            return_data = [data['Grade'], data['Class'], data.get('Preferences', preferences_default)]
             log.info("[#%s] get_user@user.py: Succeeded" % req_id)
         else:  # 사용자 정보 없을 때
-            return_data = [None, None]
+            return_data = [None, None, {}]
             log.info("[#%s] get_user@user.py: No User Info" % req_id)
         return return_data
     except Exception:
@@ -64,22 +71,27 @@ def get_user(uid: str, req_id: str, debugging: bool):
 
 
 # 사용자 생성 및 수정
-def manage_user(uid: str, user_grade: int, user_class: int, req_id: str, debugging: bool):
+def manage_user(uid: str, user_grade: int, user_class: int, preferences: dict, req_id: str, debugging: bool):
     log.info("[#%s] manage_user@user.py: Started Managing User Info" % req_id)
     try:
-        data = users_collection.find_one({'UID': uid})
+        current_settings = users_collection.find_one({'UID': uid}, {'_id': False})
+        if preferences:
+            new_settings = {"UID": uid, "Grade": user_grade, "Class": user_class, "Preferences": preferences}
+        else:
+            new_settings = {"UID": uid, "Grade": user_grade, "Class": user_class,
+                            "Preferences": current_settings.get('Preferences', preferences_default)}
         if debugging:
-            print(data)
-        if data:  # 사용자 정보 있을 때
-            if data['Grade'] == user_grade and data['Class'] == user_class:  # 사용자 정보 똑같을 때
+            print(current_settings)
+        if current_settings:  # 사용자 정보 있을 때
+            if current_settings == new_settings:  # 사용자 정보 똑같을 때
                 log.info("[#%s] manage_user@user.py: Same" % req_id)
                 return "Same"
             else:  # 사용자 정보 있고 같지도 않을 때 - 업데이트
-                data = users_collection.update({'UID': uid}, {'$set': {'Grade': user_grade, 'Class': user_class}})
+                users_collection.update({'UID': uid}, {'$set': new_settings})
                 log.info("[#%s] manage_user@user.py: Updated" % req_id)
                 return "Updated"
         else:  # 사용자 정보 없을 때 - 생성
-            users_collection.insert_one({"UID": uid, "Grade": user_grade, "Class": user_class})
+            users_collection.insert_one(new_settings)
             log.info("[#%s] manage_user@user.py: Registered" % req_id)
             return "Registered"
     except Exception:
@@ -190,7 +202,8 @@ def user_settings_rest_get(req, req_id, debugging):
         except Exception as error:
             log.err("[#%s] user_settings_rest_get@user.py: %s" % (req_id, error))
             return hdm_error("ServerError")
-        return {'classes': list(range(1, classes + 1)), 'current_grade': user[0], 'current_class': user[1]}
+        return {'classes': list(range(1, classes + 1)), 'current_grade': user[0], 'current_class': user[1],
+                'preferences': user[2]}
     else:
         return hdm_error("InvalidToken")
 
@@ -205,16 +218,17 @@ def user_settings_rest_post(req, req_id, debugging):
         user_grade = int(req_data["user_grade"])
         user_class = int(req_data["user_class"])
         if 0 < user_grade < 4 and 0 < user_class <= classes:
-            try:
-                manage_user(uid, user_grade, user_class, req_id, debugging)
-            except Exception as error:
-                log.err("[#%s] user_settings_rest_post@user.py: %s" % (req_id, error))
-                return hdm_error("ServerError")
+            if all(item in preferences_values.keys() for item in req_data["preferences"].keys()):
+                for i in req_data["preferences"].keys():
+                    if not req_data["preferences"][i] in preferences_values[i]:
+                        return hdm_error("InvalidRequest")
+                try:
+                    manage_user(uid, user_grade, user_class, req_data["preferences"], req_id, debugging)
+                except Exception as error:
+                    log.err("[#%s] user_settings_rest_post@user.py: %s" % (req_id, error))
+                    return hdm_error("ServerError")
             return {'message': "저장했습니다."}
-        else:
-            return hdm_error("InvalidRequest")
-    else:
-        return hdm_error("InvalidRequest")
+    return hdm_error("InvalidRequest")
 
 # 사용자 설정 - DELETE
 @decode_data

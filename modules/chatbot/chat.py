@@ -59,6 +59,11 @@ def wday(date):
         return "일"
 
 
+# 알러지정보
+allergy_string = ["", "난류", "우유", "메밀", "땅콩", "대두", "밀", "고등어", "게", "새우", "돼지고기", "복숭아",
+                  "토마토", "아황산류", "호두", "닭고기", "쇠고기", "오징어", "조개류"]
+
+
 def getuserid(uid):
     enc = hashlib.sha256()
     enc.update(uid.encode("utf-8"))
@@ -70,7 +75,7 @@ def router(platform: str, uid: str, intent: str, params: dict, req_id: str, debu
         if 'Briefing' in intent:
             return briefing(uid, req_id, debugging)
         elif 'Meal' in intent:
-            return meal(params, req_id, debugging)
+            return meal(uid, params, req_id, debugging)
         elif 'Timetable' in intent:
             return timetable(platform, uid, params, req_id, debugging)
         elif 'Schedule' in intent:
@@ -91,7 +96,7 @@ def router(platform: str, uid: str, intent: str, params: dict, req_id: str, debu
 
 
 # 식단조회
-def meal(params: dict, req_id: str, debugging: bool):
+def meal(uid: str, params: dict, req_id: str, debugging: bool):
     try:
         if not params['date']:
             return ["언제의 급식을 조회하시겠어요?"], None
@@ -99,9 +104,28 @@ def meal(params: dict, req_id: str, debugging: bool):
             date: datetime = params['date']
             if date.weekday() >= 5:  # 주말
                 return ["급식을 실시하지 않습니다. (주말)"], None
+            # 사용자 설정 불러오기
+            user_preferences = user.get_user(uid, req_id, debugging)[2]
             meal = get_data.meal(date.year, date.month, date.day, req_id, debugging)
+            print(user_preferences['AllergyInfo'])
+            if user_preferences['AllergyInfo'] == 'None':
+                menus = [i[0] for i in meal["menu"]]
+            elif user_preferences['AllergyInfo'] == 'FullText':
+                menus = []
+                for i in meal["menu"]:
+                    if i[1]:
+                        menus.append('%s(%s)' % (i[0], ', '.join(allergy_string[x] for x in i[1])))
+                    else:
+                        menus.append(i[0])
+            else:
+                menus = []
+                for i in meal["menu"]:
+                    if i[1]:
+                        menus.append('%s(%s)' % (i[0], ', '.join(str(x) for x in i[1])))
+                    else:
+                        menus.append(i[0])
             if not "message" in meal:  # 파서 메시지 있는지 확인, 없으면 만들어서 응답
-                return ["%s:\n\n%s\n\n열량: %s kcal" % (meal["date"], meal["menu"], meal["kcal"])], None
+                return ["%s:\n\n%s\n\n열량: %s kcal" % (meal["date"], '\n'.join(menus), meal["kcal"])], None
             if meal["message"] == "등록된 데이터가 없습니다.":
                 cal = get_data.schdl(date.year, date.month, date.day, req_id, debugging)
                 if not cal == "일정이 없습니다.":
@@ -193,8 +217,8 @@ def schdl(params: dict, req_id: str, debugging: bool):
                 prsnt_schdl = prsnt_schdl
                 if prsnt_schdl:
                     msg = "%s-%s-%s(%s):\n%s" % (
-                    str(date.year).zfill(4), str(date.month).zfill(2), str(date.day).zfill(2),
-                    wday(date), prsnt_schdl)  # YYYY-MM-DD(Weekday)
+                        str(date.year).zfill(4), str(date.month).zfill(2), str(date.day).zfill(2),
+                        wday(date), prsnt_schdl)  # YYYY-MM-DD(Weekday)
                 else:
                     msg = "일정이 없습니다."
             # 특정일자 조회 끝
@@ -328,9 +352,10 @@ def briefing(uid: str, req_id: str, debugging: bool):
             meal = get_data.meal(date.year, date.month, date.day, req_id, debugging)
             if not "message" in meal:  # 파서 메시지 있는지 확인, 없으면 만들어서 응답
                 briefing_meal_ga = "%s 급식은 %s 입니다." % (
-                    date_ko, re.sub(r'\[[^\]]*\]', '', meal["menu"].replace('\n', '').replace(',', ', ').replace('⭐', '')))
+                    date_ko,
+                    re.sub(r'\[[^\]]*\]', '', meal["menu"].replace('\n', '').replace(',', ', ').replace('⭐', '')))
                 briefing_meal = "%s 급식:\n%s" % (date_ko, meal["menu"].replace('\n\n', '\n'))
-            if meal["message"] == "등록된 데이터가 없습니다.":
+            elif meal["message"] == "등록된 데이터가 없습니다.":
                 log.info("[#%s] briefing@chat.py: No Meal" % req_id)
                 briefing_meal_ga = date_ko + "은 급식을 실시하지 않습니다."
                 briefing_meal = date_ko + "은 급식을 실시하지 않습니다."
@@ -512,7 +537,9 @@ def user_settings(uid: str, req_id: str):
             {
                 "type": "web",
                 "title": "내 정보 관리",
-                "url": url + "?token=" + security.generate_token('UserSettings', uid, ['GetUserInfo', 'ManageUserInfo', 'GetUsageData', 'DeleteUsageData'], req_id)
+                "url": url + "?token=" + security.generate_token('UserSettings', uid,
+                                                                 ['GetUserInfo', 'ManageUserInfo', 'GetUsageData',
+                                                                  'DeleteUsageData'], req_id)
             }
         ]
     }], None
@@ -520,7 +547,7 @@ def user_settings(uid: str, req_id: str):
 
 def modify_user_info(params: dict, uid: str, req_id: str, debugging: bool):
     try:
-        user.manage_user(uid, int(params['grade']), int(params['class']), req_id, debugging)
+        user.manage_user(uid, int(params['grade']), int(params['class']), {}, req_id, debugging)
     except KeyError:
         return ["변경할 학년/반 정보를 입력해 주세요."], None
     except ValueError:
