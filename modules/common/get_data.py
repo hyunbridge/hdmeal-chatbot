@@ -84,7 +84,7 @@ def tt(tt_grade: int, tt_class: int, date, req_id, debugging):
 
 
     # 헤더 작성. n학년 n반, yyyy-mm-dd(요일): 형식
-    header = ("%s학년 %s반,\n%s(%s):\n" % (
+    header = ("%s학년 %s반,\n%s(%s):" % (
         tt_grade, tt_class, datetime.date(date.year, date.month, date.day), wday(tt_weekday)))
     if debugging:
         print(header)
@@ -93,9 +93,9 @@ def tt(tt_grade: int, tt_class: int, date, req_id, debugging):
     body = str()
     for i in range(len(data)):
         if "[MSG]" in data[i]:  # 파서 메세지에는 아무것도 붙이지 않음
-            body = body + "%s" % data[i].replace("[MSG]", "")
+            body = body + "\n%s" % data[i].replace("[MSG]", "")
         else:
-            body = body + "%s교시: %s" % (i+1, data[i])
+            body = body + "\n%s교시: %s" % (i+1, data[i])
 
     log.info("[#%s] tt@get_data.py: Succeeded(%s-%s, %s-%s-%s)"
              % (req_id, tt_grade, tt_class, date.year, date.month, date.day))
