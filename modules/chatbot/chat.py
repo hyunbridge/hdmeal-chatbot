@@ -124,7 +124,7 @@ def meal(uid: str, params: dict, req_id: str, debugging: bool):
                     else:
                         menus.append(i[0])
             if not "message" in meal:  # 파서 메시지 있는지 확인, 없으면 만들어서 응답
-                return ["%s:\n\n%s\n\n열량: %s kcal" % (meal["date"], '\n'.join(menus), meal["kcal"])], None
+                return ["%s:\n%s\n\n열량: %s kcal" % (meal["date"], '\n'.join(menus), meal["kcal"])], None
             if meal["message"] == "등록된 데이터가 없습니다.":
                 cal = get_data.schdl(date.year, date.month, date.day, req_id, debugging)
                 if not cal == "일정이 없습니다.":
@@ -351,9 +351,8 @@ def briefing(uid: str, req_id: str, debugging: bool):
             meal = get_data.meal(date.year, date.month, date.day, req_id, debugging)
             if not "message" in meal:  # 파서 메시지 있는지 확인, 없으면 만들어서 응답
                 briefing_meal_ga = "%s 급식은 %s 입니다." % (
-                    date_ko,
-                    re.sub(r'\[[^\]]*\]', '', meal["menu"].replace('\n', '').replace(',', ', ').replace('⭐', '')))
-                briefing_meal = "%s 급식:\n%s" % (date_ko, meal["menu"].replace('\n\n', '\n'))
+                    date_ko, ', '.join(i[0] for i in meal["menu"]).replace('⭐', ''))
+                briefing_meal = "%s 급식:\n%s" % (date_ko, '\n'.join(i[0] for i in meal["menu"]))
             elif meal["message"] == "등록된 데이터가 없습니다.":
                 log.info("[#%s] briefing@chat.py: No Meal" % req_id)
                 briefing_meal_ga = date_ko + "은 급식을 실시하지 않습니다."
@@ -376,7 +375,7 @@ def briefing(uid: str, req_id: str, debugging: bool):
                 if tt == "등록된 데이터가 없습니다.":
                     briefing_tt = "등록된 시간표가 없습니다."
                 else:
-                    briefing_tt = "%s 시간표:\n%s" % (date_ko, tt.split('):\n\n')[1])  # 헤더부분 제거
+                    briefing_tt = "%s 시간표:\n%s" % (date_ko, tt.split('):\n')[1])  # 헤더부분 제거
             else:
                 log.info("[#%s] briefing@chat.py: Non-Registered User" % req_id)
                 briefing_tt = "등록된 사용자만 시간표를 볼 수 있습니다."
