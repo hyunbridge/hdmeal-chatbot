@@ -9,7 +9,6 @@
 
 import datetime
 import hashlib
-import re
 import time
 from itertools import groupby
 from threading import Thread
@@ -90,7 +89,7 @@ def router(platform: str, uid: str, intent: str, params: dict, req_id: str, debu
             return lol(params, req_id, debugging)
         else:
             return ["잘못된 요청입니다.\n요청 ID: " + req_id], None
-    except Exception as e:
+    except OSError as e:
         log.err("[#%s] router@chat.py: Uncaught Error %s" % (req_id, e))
         return ["알 수 없는 오류가 발생했습니다.\n요청 ID: " + req_id], None
 
@@ -104,26 +103,26 @@ def meal(uid: str, params: dict, req_id: str, debugging: bool):
             date: datetime = params['date']
             if date.weekday() >= 5:  # 주말
                 return ["급식을 실시하지 않습니다. (주말)"], None
-            # 사용자 설정 불러오기
-            user_preferences = user.get_user(uid, req_id, debugging)[2]
             meal = get_data.meal(date.year, date.month, date.day, req_id, debugging)
-            if user_preferences['AllergyInfo'] == 'None':
-                menus = [i[0] for i in meal["menu"]]
-            elif user_preferences['AllergyInfo'] == 'FullText':
-                menus = []
-                for i in meal["menu"]:
-                    if i[1]:
-                        menus.append('%s(%s)' % (i[0], ', '.join(allergy_string[x] for x in i[1])))
-                    else:
-                        menus.append(i[0])
-            else:
-                menus = []
-                for i in meal["menu"]:
-                    if i[1]:
-                        menus.append('%s(%s)' % (i[0], ', '.join(str(x) for x in i[1])))
-                    else:
-                        menus.append(i[0])
-            if not "message" in meal:  # 파서 메시지 있는지 확인, 없으면 만들어서 응답
+            if "message" not in meal:  # 파서 메시지 있는지 확인, 없으면 만들어서 응답
+                # 사용자 설정 불러오기
+                user_preferences = user.get_user(uid, req_id, debugging)[2]
+                if user_preferences['AllergyInfo'] == 'None':
+                    menus = [i[0] for i in meal["menu"]]
+                elif user_preferences['AllergyInfo'] == 'FullText':
+                    menus = []
+                    for i in meal["menu"]:
+                        if i[1]:
+                            menus.append('%s(%s)' % (i[0], ', '.join(allergy_string[x] for x in i[1])))
+                        else:
+                            menus.append(i[0])
+                else:
+                    menus = []
+                    for i in meal["menu"]:
+                        if i[1]:
+                            menus.append('%s(%s)' % (i[0], ', '.join(str(x) for x in i[1])))
+                        else:
+                            menus.append(i[0])
                 return ["%s:\n%s\n\n열량: %s kcal" % (meal["date"], '\n'.join(menus), meal["kcal"])], None
             if meal["message"] == "등록된 데이터가 없습니다.":
                 cal = get_data.schdl(date.year, date.month, date.day, req_id, debugging)
