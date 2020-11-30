@@ -20,7 +20,7 @@ import urllib.request
 from modules.common import conf, log
 
 # 컴시간알리미 웹사이트 URL
-url = "http://comci.kr/st/"
+url = "http://xn--s39aj90b0nb2xw6xh.kr/"
 
 # 기타 옵션 입력
 headers = {
