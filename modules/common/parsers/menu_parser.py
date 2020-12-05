@@ -12,7 +12,6 @@ import json
 import re
 import urllib.error
 import urllib.request
-from collections import OrderedDict
 from bs4 import BeautifulSoup
 from modules.common import conf, log
 
@@ -22,11 +21,9 @@ neis_baseurl = conf.configs['School']['NEIS']['BaseURL']
 delicious = conf.delicious
 
 
-def parse(year, month, day, req_id, debugging):
-    global date
-    year = str(year).zfill(4)
-    month = str(month).zfill(2)
-    day = str(day).zfill(2)
+def parse(year: int, month: int, day: int, req_id: str, debugging: bool):
+    dates, menus, calories = [], [], []
+    year, month, day = int(year), int(month), int(day)
 
     log.info("[#%s] parse@menu_parser.py: Started Parsing Menu(%s-%s-%s)" % (req_id, year, month, day))
 
@@ -36,8 +33,8 @@ def parse(year, month, day, req_id, debugging):
                                                     "&schulCrseScCode=%d"
                                                     "&schulKndScCode=%02d"
                                                     "&schMmealScCode=2"
-                                                    "&schYmd=%s.%s.%s" % (school_code, school_kind, school_kind,
-                                                                          year, month, day), timeout=2)
+                                                    "&schYmd=%04d.%02d.%02d" % (school_code, school_kind, school_kind,
+                                                                                year, month, day), timeout=2)
     except (urllib.error.HTTPError, urllib.error.URLError) as e:
         log.err("[#%s] parse@menu_parser.py: Failed to Parse Menu(%s-%s-%s) because %s" % (
             req_id, year, month, day, e))
@@ -46,71 +43,62 @@ def parse(year, month, day, req_id, debugging):
     data = data.find_all("tr")
 
     # 날짜 파싱
-    loc = int()
-    raw_date = data[0].find_all("th")
-    try:
-        for i in range(8):
-            if year + "." + month + "." + day in str(raw_date[i]):
-                loc = i - 1
-                date = raw_date[i].get_text().strip().replace(".", "-")
-                if debugging:
-                    print(loc)
-                    print(date)
-    except IndexError:
-        log.err("[#%s] parse@menu_parser.py: Failed to Parse Menu(%s-%s-%s)" % (req_id, year, month, day))
-        return "IndexError"
-    if not loc:
-        log.err("[#%s] parse@menu_parser.py: Failed to Parse Menu(%s-%s-%s)" % (req_id, year, month, day))
-        return ""
+    dates_text_raw = data[0].find_all("th")
+    for date_text_raw in dates_text_raw:
+        date_text = date_text_raw.get_text().strip().replace(".", "-")
+        if not date_text:
+            continue
+        dates.append(date_text)
 
     # 메뉴 파싱
-    menus = data[2].find_all("td")
-    manu_final = []
-    try:
-        menus = str(menus[loc]).replace('<br/>', '.\n')  # 줄바꿈 처리
-    except IndexError:
-        log.err("[#%s] parse@menu_parser.py: Failed to Parse Menu(%s-%s-%s)" % (req_id, year, month, day))
-        return "IndexError"
-    menus = html.unescape(re.sub('<.+?>', '', menus).strip())  # 태그 및 HTML 엔티티 처리
-    if menus == "":
-        log.info("[#%s] parse@menu_parser.py: No Menu(%s-%s-%s)" % (req_id, year, month, day))
-        return "NoData"
-    for menu in menus.split('\n'):
-        allergy_re = re.findall(r'[0-9]+\.', menu)
-        allergy_info = [int(x[:-1]) for x in allergy_re]
-        menu = menu[:-1].replace(''.join(allergy_re), '')
-        # 맛있는 메뉴 강조표시
-        for keyword in delicious:
-            if keyword in menu:
-                menu = "⭐" + menu  # 별 덧붙이기
-                break
-        manu_final.append([menu, allergy_info])
-    if debugging:
-        print(menus)
-        print(manu_final)
+    menus_raw = data[2].find_all("td")
+    for menu_raw in menus_raw:
+        meal = []
+        menu = str(menu_raw).replace('<br/>', '.\n')  # 줄바꿈 처리
+        menu = html.unescape(re.sub('<.+?>', '', menu).strip())  # 태그 및 HTML 엔티티 처리
+        for i in menu.split('\n'):
+            if i:
+                allergy_re = re.findall(r'[0-9]+\.', i)
+                allergy_info = [int(x[:-1]) for x in allergy_re]
+                i = i[:-1].replace(''.join(allergy_re), '')
+                # 맛있는 메뉴 강조표시
+                for keyword in delicious:
+                    if keyword in i:
+                        i = "⭐" + i  # 별 덧붙이기
+                        break
+                meal.append([i, allergy_info])
+        menus.append(meal)
 
     # 칼로리 파싱
-    kcal = data[51].find_all("td")
-    kcal = kcal[loc].get_text().strip()
-    if debugging:
-        print(kcal)
+    calories_raw = data[51].find_all("td")
+    for calorie_raw in calories_raw:
+        calorie = calorie_raw.get_text().strip()
+        try:
+            calorie = float(calorie)
+        except ValueError:
+            calorie = None
+        calories.append(calorie)
 
-    # 반환값 생성
-    return_data = OrderedDict()
-    return_data["date"] = date
-    return_data["menu"] = manu_final
-    return_data["kcal"] = kcal
-    if debugging:
-        print(return_data)
+    # 파일 생성
+    for loc in range(len(dates)):
+        try:
+            if menus[loc]:
+                return_data = {
+                    "date": dates[loc],
+                    "menu": menus[loc],
+                    "kcal": calories[loc]
+                }
+                if debugging:
+                    print(return_data)
 
-    with open('data/cache/' + date[:10] + '.json', 'w',
-              encoding="utf-8") as make_file:
-        json.dump(return_data, make_file, ensure_ascii=False)
-        print("File Created")
+                with open('data/cache/' + dates[loc][:10] + '.json', 'w',
+                          encoding="utf-8") as make_file:
+                    json.dump(return_data, make_file, ensure_ascii=False)
+                    print("File Created")
 
-    log.info("[#%s] parse@menu_parser.py: Succeeded(%s-%s-%s)" % (req_id, year, month, day))
-
-    return 0
+                log.info("[#%s] parse@menu_parser.py: Succeeded(%s-%s-%s)" % (req_id, year, month, day))
+        except IndexError:
+            pass
 
 
 # 디버그

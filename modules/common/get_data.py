@@ -44,10 +44,7 @@ def meal(year, month, date, req_id, debugging):
     log.info("[#%s] meal@get_data.py: Started Fetching Meal Data(%s-%s-%s)" % (req_id, year, month, date))
 
     if not os.path.isfile('data/cache/' + year + '-' + month + '-' + date + '.json'):
-        parser = menu_parser.parse(year, month, date, req_id, debugging)
-        if parser == "NoData" or parser == "":
-            log.info("[#%s] meal@get_data.py: No Meal Data(%s-%s-%s)" % (req_id, year, month, date))
-            return {"message": "등록된 데이터가 없습니다."}
+        menu_parser.parse(year, month, date, req_id, debugging)
 
     try:
         with open('data/cache/' + year + '-' + month + '-' + date + '.json',
