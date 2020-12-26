@@ -7,69 +7,70 @@
 # Copyright 2019-2020, Hyungyo Seo
 # schedule_parser.py - NEIS 서버에 접속하여 학사일정을 파싱해오는 스크립트입니다.
 
+import datetime
 import json
 import urllib.error
 import urllib.request
-from bs4 import BeautifulSoup
 from modules.common import conf, log
 
 # 설정 불러오기
-school_code = conf.configs['School']['NEIS']['Code']
-school_kind = conf.configs['School']['NEIS']['Kind']
-neis_baseurl = conf.configs['School']['NEIS']['BaseURL']
+NEIS_OPENAPI_TOKEN = conf.configs['Tokens']['NEIS']  # NEUS 오픈API 인증 토큰
+ATPT_OFCDC_SC_CODE = conf.configs['School']['NEIS']['ATPT_OFCDC_SC_CODE']  # 시도교육청코드
+SD_SCHUL_CODE = conf.configs['School']['NEIS']['SD_SCHUL_CODE']  # 표준학교코드
+
 
 def parse(year, month, req_id, debugging):
+    year, month = int(year), int(month)
+    schdls = {}
 
     log.info("[#%s] parse@schedule_parser.py: Started Parsing Schedule(%s-%s)" % (req_id, year, month))
 
-    # 학년도 기준, 다음해 2월까지 전년도로 조회
-    if month < 3:
-        school_year = year - 1
-    else:
-        school_year = year
+    date_from = datetime.date(year, month, 1)
+    date_to = (date_from + datetime.timedelta(days=40)).replace(day=1) - datetime.timedelta(days=1)
+    # 다음달 첫날의 날짜를 구하고 -1일 => 이번달 말일
 
     try:
-        url = (neis_baseurl+"sts_sci_sf01_001.do?"
-               "schulCode=%s"
-               "&schulCrseScCode=%d"
-               "&schulKndScCode=%02d"
-               "&ay=%04d&mm=%02d"
-               % (school_code, school_kind, school_kind, school_year, month))
-        req = urllib.request.urlopen(url, timeout=2)
+        req = urllib.request.urlopen("https://open.neis.go.kr/hub/SchoolSchedule?KEY=%s&Type=json&ATPT_OFCDC_SC_CODE"
+                                     "=%s&SD_SCHUL_CODE=%s&AA_FROM_YMD=%s&AA_TO_YMD=%s"
+                                     % (NEIS_OPENAPI_TOKEN, ATPT_OFCDC_SC_CODE, SD_SCHUL_CODE,
+                                        date_from.strftime("%Y%m%d"), date_to.strftime("%Y%m%d")), timeout=2)
     except (urllib.error.HTTPError, urllib.error.URLError) as e:
         log.err("[#%s] parse@schedule_parser.py: Failed to Parse Schedule(%s-%s) because %s" % (
             req_id, year, month, e))
         raise ConnectionError
 
-    if debugging:
-        print(url)
+    data = json.loads(req.read())
+    print(data)
 
-    data = BeautifulSoup(req, 'html.parser')
-    data = data.find_all('div', class_='textL')
+    for i in data["SchoolSchedule"][1]["row"]:
+        if i["EVENT_NM"] == "토요휴업일":
+            continue
 
-    calendar = dict()
+        date = datetime.datetime.strptime(i["AA_YMD"], "%Y%m%d").date()
 
-    # 일정 후처리(잡정보들 삭제)
-    def pstpr(cal):
-        return cal.replace("토요휴업일", "").strip().replace('\n\n\n', '\n')
+        related_grade = []
+        if i["ONE_GRADE_EVENT_YN"] == "Y": related_grade.append(1)
+        if i["TW_GRADE_EVENT_YN"] == "Y": related_grade.append(2)
+        if i["THREE_GRADE_EVENT_YN"] == "Y": related_grade.append(3)
+        if i["FR_GRADE_EVENT_YN"] == "Y": related_grade.append(4)
+        if i["FIV_GRADE_EVENT_YN"] == "Y": related_grade.append(5)
+        if i["SIX_GRADE_EVENT_YN"] == "Y": related_grade.append(6)
 
-    for i in range(len(data)):
-        string = data[i].get_text().strip()
-        if string[2:].replace('\n', '') and pstpr(string[2:]):
-            calendar[int(string[:2])] = pstpr(string[2:])
+        schedule_text = "%s(%s)" % (i["EVENT_NM"], ", ".join("%s학년" % i for i in related_grade))
+        schedule_text = schedule_text.replace("()", "")
 
-    if debugging:
-        print(calendar)
+        schdls[str(date.day)] = schedule_text
 
-    if calendar:
+    if schdls:
         with open('data/cache/Cal-%s-%s.json' % (year, month), 'w',
                   encoding="utf-8") as make_file:
-            json.dump(calendar, make_file, ensure_ascii=False)
+            json.dump(schdls, make_file, ensure_ascii=False)
             print("File Created")
 
     log.info("[#%s] parse@schedule_parser.py: Succeeded(%s-%s)" % (req_id, year, month))
 
     return 0
+
 
 # 디버그
 if __name__ == "__main__":
