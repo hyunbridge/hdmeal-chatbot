@@ -7,98 +7,72 @@
 # Copyright 2019-2020, Hyungyo Seo
 # menu_parser.py - NEIS 서버에 접속하여 급식정보를 파싱해오는 스크립트입니다.
 
-import html
+import datetime
 import json
 import re
 import urllib.error
 import urllib.request
-from bs4 import BeautifulSoup
 from modules.common import conf, log
 
-school_code = conf.configs['School']['NEIS']['Code']
-school_kind = conf.configs['School']['NEIS']['Kind']
-neis_baseurl = conf.configs['School']['NEIS']['BaseURL']
-delicious = conf.delicious
+NEIS_OPENAPI_TOKEN = conf.configs['Tokens']['NEIS']  # NEUS 오픈API 인증 토큰
+ATPT_OFCDC_SC_CODE = conf.configs['School']['NEIS']['ATPT_OFCDC_SC_CODE']  # 시도교육청코드
+SD_SCHUL_CODE = conf.configs['School']['NEIS']['SD_SCHUL_CODE']  # 표준학교코드
+WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"]
+DELICIOUS = conf.delicious
 
 
 def parse(year: int, month: int, day: int, req_id: str, debugging: bool):
-    dates, menus, calories = [], [], []
     year, month, day = int(year), int(month), int(day)
 
     log.info("[#%s] parse@menu_parser.py: Started Parsing Menu(%s-%s-%s)" % (req_id, year, month, day))
 
     try:
-        url = urllib.request.urlopen(neis_baseurl + "sts_sci_md01_001.do?"
-                                                    "schulCode=%s"
-                                                    "&schulCrseScCode=%d"
-                                                    "&schulKndScCode=%02d"
-                                                    "&schMmealScCode=2"
-                                                    "&schYmd=%04d.%02d.%02d" % (school_code, school_kind, school_kind,
-                                                                                year, month, day), timeout=2)
+        req = urllib.request.urlopen(
+            "https://open.neis.go.kr/hub/mealServiceDietInfo?KEY=%s&Type=json&ATPT_OFCDC_SC_CODE"
+            "=%s&SD_SCHUL_CODE=%s&MMEAL_SC_CODE=2&MLSV_YMD=%02d%02d%02d"
+            % (NEIS_OPENAPI_TOKEN, ATPT_OFCDC_SC_CODE, SD_SCHUL_CODE, year, month, day), timeout=2)
     except (urllib.error.HTTPError, urllib.error.URLError) as e:
         log.err("[#%s] parse@menu_parser.py: Failed to Parse Menu(%s-%s-%s) because %s" % (
             req_id, year, month, day, e))
         raise ConnectionError
-    data = BeautifulSoup(url, 'html.parser')
-    data = data.find_all("tr")
 
-    # 날짜 파싱
-    dates_text_raw = data[0].find_all("th")
-    for date_text_raw in dates_text_raw:
-        date_text = date_text_raw.get_text().strip().replace(".", "-")
-        if not date_text:
-            continue
-        dates.append(date_text)
+    data = json.loads(req.read())
 
-    # 메뉴 파싱
-    menus_raw = data[2].find_all("td")
-    for menu_raw in menus_raw:
-        meal = []
-        menu = str(menu_raw).replace('<br/>', '.\n')  # 줄바꿈 처리
-        menu = html.unescape(re.sub('<.+?>', '', menu).strip())  # 태그 및 HTML 엔티티 처리
-        for i in menu.split('\n'):
-            if i:
-                allergy_re = re.findall(r'[0-9]+\.', i)
-                allergy_info = [int(x[:-1]) for x in allergy_re]
-                i = i[:-1].replace(''.join(allergy_re), '')
+    try:
+        for item in data["mealServiceDietInfo"][1]["row"]:
+            meal = []
+            date = datetime.datetime.strptime(item["MLSV_YMD"], "%Y%m%d").date()
+
+            # 메뉴 파싱
+            menu = item["DDISH_NM"].replace('<br/>', '.\n')  # 줄바꿈 처리
+            menu = menu.split('\n')  # 한 줄씩 자르기
+            for i in menu:
+                allergy_info = [int(x[:-1]) for x in re.findall(r'[0-9]+\.', i)]
+                i = i.replace(".", "").replace(''.join(str(x) for x in allergy_info), '')
                 # 맛있는 메뉴 강조표시
-                for keyword in delicious:
+                for keyword in DELICIOUS:
                     if keyword in i:
                         i = "⭐" + i  # 별 덧붙이기
                         break
                 meal.append([i, allergy_info])
-        menus.append(meal)
 
-    # 칼로리 파싱
-    calories_raw = data[51].find_all("td")
-    for calorie_raw in calories_raw:
-        calorie = calorie_raw.get_text().strip()
-        try:
-            calorie = float(calorie)
-        except ValueError:
-            calorie = None
-        calories.append(calorie)
+            # 파일 쓰기
+            return_data = {
+                "date": "%s(%s)" % (date.strftime("%Y-%m-%d"), WEEKDAYS[date.weekday()]),
+                "menu": meal,
+                "kcal": float(item["CAL_INFO"].replace(" Kcal", ""))
+            }
+            if debugging:
+                print(return_data)
 
-    # 파일 생성
-    for loc in range(len(dates)):
-        try:
-            if menus[loc]:
-                return_data = {
-                    "date": dates[loc],
-                    "menu": menus[loc],
-                    "kcal": calories[loc]
-                }
-                if debugging:
-                    print(return_data)
+            with open('data/cache/' + date.strftime("%Y-%m-%d") + '.json', 'w',
+                      encoding="utf-8") as make_file:
+                json.dump(return_data, make_file, ensure_ascii=False)
+                print("File Created")
 
-                with open('data/cache/' + dates[loc][:10] + '.json', 'w',
-                          encoding="utf-8") as make_file:
-                    json.dump(return_data, make_file, ensure_ascii=False)
-                    print("File Created")
-
-                log.info("[#%s] parse@menu_parser.py: Succeeded(%s-%s-%s)" % (req_id, year, month, day))
-        except IndexError:
-            pass
+            log.info("[#%s] parse@menu_parser.py: Succeeded(%s)" % (req_id, date.strftime("%Y-%m-%d")))
+    except KeyError:
+        pass
 
 
 # 디버그
