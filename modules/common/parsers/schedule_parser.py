@@ -11,6 +11,7 @@ import datetime
 import json
 import urllib.error
 import urllib.request
+from itertools import groupby
 from modules.common import conf, log
 
 # 설정 불러오기
@@ -40,8 +41,8 @@ def parse(year, month, req_id, debugging):
         raise ConnectionError
 
     data = json.loads(req.read())
-    print(data)
 
+    schedules = []
     for i in data["SchoolSchedule"][1]["row"]:
         if i["EVENT_NM"] == "토요휴업일":
             continue
@@ -56,10 +57,14 @@ def parse(year, month, req_id, debugging):
         if i["FIV_GRADE_EVENT_YN"] == "Y": related_grade.append(5)
         if i["SIX_GRADE_EVENT_YN"] == "Y": related_grade.append(6)
 
-        schedule_text = "%s(%s)" % (i["EVENT_NM"], ", ".join("%s학년" % i for i in related_grade))
-        schedule_text = schedule_text.replace("()", "")
+        schedules.append([date, i["EVENT_NM"], related_grade])
 
-        schdls[str(date.day)] = schedule_text
+        for k, v in groupby(schedules, lambda k: k[0]):
+            schedule_text = ""
+            for item in v:
+                schedule_text = "%s%s(%s)\n" % (schedule_text, item[1], ", ".join("%s학년" % i for i in item[2]))
+            schedule_text = schedule_text[:-1].replace("()", "")
+            schdls[str(k.day)] = schedule_text
 
     if schdls:
         with open('data/cache/Cal-%s-%s.json' % (year, month), 'w',
