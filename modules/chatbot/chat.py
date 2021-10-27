@@ -107,9 +107,9 @@ def meal(uid: str, params: dict, req_id: str, debugging: bool):
             if "message" not in meal:  # 파서 메시지 있는지 확인, 없으면 만들어서 응답
                 # 사용자 설정 불러오기
                 user_preferences = user.get_user(uid, req_id, debugging)[2]
-                if user_preferences['AllergyInfo'] == 'None':
+                if user_preferences.get('AllergyInfo') == 'None':
                     menus = [i[0] for i in meal["menu"]]
-                elif user_preferences['AllergyInfo'] == 'FullText':
+                elif user_preferences.get('AllergyInfo') == 'FullText':
                     menus = []
                     for i in meal["menu"]:
                         if i[1]:
