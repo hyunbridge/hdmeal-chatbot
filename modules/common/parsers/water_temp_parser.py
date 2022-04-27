@@ -10,25 +10,42 @@
 import datetime
 import urllib.error
 import urllib.request
-from bs4 import BeautifulSoup
-from modules.common import log
+from modules.common import log, conf
+
+api_key = conf.configs["Tokens"]["Seoul"]
 
 
 def get(req_id, debugging):
-    log.info("[#%s] get@water_temp_parser.py: Started Parsing Water Temperature" % req_id)
+    log.info(
+        "[#%s] get@water_temp_parser.py: Started Parsing Water Temperature" % req_id
+    )
     try:
-        url = urllib.request.urlopen("http://koreawqi.go.kr/wQSCHomeLayout_D.wq?action_type=T", timeout=2)
+        url = urllib.request.urlopen(
+            f"http://openapi.seoul.go.kr:8088/{api_key}/json/WPOSInformationTime/1/5/",
+            timeout=2,
+        )
     except (urllib.error.HTTPError, urllib.error.URLError) as e:
-        log.err("[#%s] get@water_temp_parser.py: Failed to Parse Water Temperature because %s" % (req_id, e))
+        log.err(
+            "[#%s] get@water_temp_parser.py: Failed to Parse Water Temperature because %s"
+            % (req_id, e)
+        )
         raise ConnectionError
-    data = BeautifulSoup(url, 'html.parser')
+    import json
+
+    res = json.load(url)
+    data = res["WPOSInformationTime"]["row"]
+
     # 측정일시 파싱
-    date = data.find('span', class_='data').get_text().split('"')[1]
-    date = int(date[0:4]), int(date[4:6]), int(date[6:8])
-    time = int(data.find('span', class_='data').get_text().split('"')[3])
-    measurement_date = datetime.datetime(date[0], date[1], date[2], time)
+    measurement_date = datetime.datetime.strptime(
+        f'{data[0]["MSR_DATE"]} {data[0]["MSR_TIME"]}', "%Y%m%d %H:%M"
+    )
     # 수온 파싱
-    wtemp = data.find('tr', class_='site_S01004').get_text()  # 구리측정소 사용
-    wtemp = wtemp.replace("구리", "").strip()
+    measurements = []
+    for i in data:
+        temp = i["W_TEMP"]
+        try:
+            measurements.append(float(temp))
+        except ValueError:
+            pass
     log.info("[#%s] get@water_temp_parser.py: Succeeded" % req_id)
-    return measurement_date, wtemp
+    return measurement_date, str(sum(measurements) / len(measurements))
