@@ -58,7 +58,7 @@ def parse(year: int, month: int, day: int, req_id: str, debugging: bool):
                 i = i.replace(f'{".".join(str(x) for x in allergy_info)}.', "").replace(
                     "()", ""
                 )
-                i = re.sub(r"[#&*-.@_ ]+$", "", i)
+                i = re.sub(r"[ #&*-.=@_]+$", "", i)
                 # 맛있는 메뉴 강조표시
                 for keyword in DELICIOUS:
                     if keyword in i:
