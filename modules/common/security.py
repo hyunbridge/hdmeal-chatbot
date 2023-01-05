@@ -16,74 +16,70 @@ from authlib.jose import JsonWebToken, JWTClaims
 from modules.common import base58, conf, log
 
 # DB정보 불러오기
-connection = pymongo.MongoClient(conf.configs['DataBase']['ConnectString'])
+connection = pymongo.MongoClient(conf.configs["DataBase"]["ConnectString"])
 db = connection.hdmeal
 utterances_collection = db.utterances
 # 토큰 불러오기
-tokens: dict = conf.configs['Tokens']['HDM']
+tokens: dict = conf.configs["Tokens"]["HDM"]
 # 사용할 JWT 알고리즘
-jwt = JsonWebToken(['HS256'])
+jwt = JsonWebToken(["HS256"])
 # JWT 토큰 검증
 claim_options = {
-            "iss": {
-                "essential": True,
-                "values": ["HDMeal-UserSettings"]
-            },
-            "uid": {
-                "essential": True
-            },
-            "scope": {
-                "essential": True
-            },
-            "reqId": {
-                "essential": True
-            },
-            "nbf": {
-                "essential": True,
-                "validate": JWTClaims.validate_nbf
-            },
-            "exp": {
-                "essential": True,
-                "validate": JWTClaims.validate_exp,
-            }
-        }
+    "iss": {"essential": True, "values": ["HDMeal-UserSettings"]},
+    "uid": {"essential": True},
+    "scope": {"essential": True},
+    "reqId": {"essential": True},
+    "nbf": {"essential": True, "validate": JWTClaims.validate_nbf},
+    "exp": {
+        "essential": True,
+        "validate": JWTClaims.validate_exp,
+    },
+}
 
 
 # DB에 요청 기록
-def log_req(uid: str, utterance: str, intent: str, params: dict, req_id: str, platform: str):
-    utterances_collection.insert_one({
-        "Platform": platform,
-        "Date": datetime.datetime.utcnow(),
-        "Request ID": req_id,
-        "User ID": uid,
-        "Utterance": utterance,
-        "Intent": intent,
-        "Parameters": params
-    })
+def log_req(
+    uid: str, utterance: str, intent: str, params: dict, req_id: str, platform: str
+):
+    utterances_collection.insert_one(
+        {
+            "Platform": platform,
+            "Date": datetime.datetime.utcnow(),
+            "Request ID": req_id,
+            "User ID": uid,
+            "Utterance": utterance,
+            "Intent": intent,
+            "Parameters": params,
+        }
+    )
+
 
 # JWT 토큰 생성
 def generate_token(issuer: str, uid: str, scope: list, req_id: str):
     log.info("[#%s] generate_token@security.py: Token Generated" % req_id)
     now = datetime.datetime.utcnow()
     return jwt.encode(
+        {"alg": "HS256", "typ": "JWT"},
         {
-            'alg': 'HS256',
-            'typ': 'JWT'
+            "iss": "HDMeal-" + issuer,
+            "uid": uid,
+            "scope": scope,
+            "reqId": req_id,
+            "nbf": now,
+            "exp": now + datetime.timedelta(seconds=600),
         },
-        {
-            'iss': 'HDMeal-' + issuer,
-            'uid': uid,
-            'scope': scope,
-            'reqId': req_id,
-            'nbf': now,
-            'exp': now + datetime.timedelta(seconds=600)
-        },
-        conf.configs['Misc']['Settings']['Secret']).decode("UTF-8")
+        conf.configs["Misc"]["Settings"]["Secret"],
+    ).decode("UTF-8")
+
 
 # JWT 토큰 검증
 def validate_token(token: str, req_id: str):
     try:
-        decoded = jwt.decode(token, conf.configs['Misc']['Settings']['Secret'], claims_options=claim_options)
+        decoded = jwt.decode(
+            token,
+            conf.configs["Misc"]["Settings"]["Secret"],
+            claims_options=claim_options,
+        )
         decoded.validate()
     except JWTErrors.ExpiredTokenError:
         log.info("[#%s] validate_token@security.py: Expired Token" % req_id)
@@ -91,26 +87,36 @@ def validate_token(token: str, req_id: str):
     except JWTErrors.JoseError:
         log.info("[#%s] validate_token@security.py: Invalid Token" % req_id)
         return False, "InvalidToken"
-    log.info("[#%s] validate_token@security.py: Valid Token (ISS %s)" % (req_id, decoded['iss']))
-    return True, decoded['uid'], decoded['scope']
+    log.info(
+        "[#%s] validate_token@security.py: Valid Token (ISS %s)"
+        % (req_id, decoded["iss"])
+    )
+    return True, decoded["uid"], decoded["scope"]
+
 
 # 리캡챠 토큰 검증
 def validate_recaptcha(token: str, req_id: str):
     try:
         req = requests.post(
-            'https://www.google.com/recaptcha/api/siteverify?secret=%s&response=%s'
-            % (conf.configs['Tokens']['reCAPTCHA'], token), data=None
+            "https://www.google.com/recaptcha/api/siteverify?secret=%s&response=%s"
+            % (conf.configs["Tokens"]["reCAPTCHA"], token),
+            data=None,
         )
         rspns = req.json()
     except Exception:
-        log.err("[#%s] validate_recaptcha@security.py: Recaptcha Validation Error" % req_id)
+        log.err(
+            "[#%s] validate_recaptcha@security.py: Recaptcha Validation Error" % req_id
+        )
         return False, "RecaptchaTokenValidationError"
-    if rspns['success']:
+    if rspns["success"]:
         log.info("[#%s] validate_recaptcha@security.py: Valid Recaptcha Token" % req_id)
-        return True,
+        return (True,)
     else:
-        log.info("[#%s] validate_recaptcha@security.py: Invalid Recaptcha Token" % req_id)
+        log.info(
+            "[#%s] validate_recaptcha@security.py: Invalid Recaptcha Token" % req_id
+        )
         return False, "InvalidRecaptchaToken"
+
 
 # 요청 ID 생성
 def generate_req_id():
@@ -126,11 +132,12 @@ def generate_req_id():
     req_id = int(rand + tmstm + tmstm_loc + chksum)  # 모두 이어붙여 요청 ID 만들기
     return base58.encode(req_id).zfill(12)  # Base58 변환, 12자리 채우기
 
+
 # 토큰 인증
 def auth(token: str, req_id: str):
     if token in tokens:
         log.info('[#%s] Authorized with Token "%s"' % (req_id, tokens[token]))
         return True
     else:
-        log.info('[#%s] Failed to Authorize(Token Not Match)' % req_id)
+        log.info("[#%s] Failed to Authorize(Token Not Match)" % req_id)
         return False
