@@ -17,7 +17,6 @@ from modules.common import conf, log
 
 conf.load()
 
-from modules import public_api
 from modules.chatbot import chat, user
 from modules.common import security, cache
 
@@ -416,32 +415,12 @@ class Skill(Resource):
         )
 
 
-# 웰 프론트엔드용 공개 API
-class WebAppAPI(Resource):
-    @staticmethod
-    @request_id
-    def get():
-        try:
-            response = public_api.webapp(request, req_id, debugging)
-            if isinstance(response, tuple):
-                return response + ({"X-HDMeal-Req-ID": req_id},)
-            else:
-                return response, 200, {"X-HDMeal-Req-ID": req_id}
-        except:
-            return (
-                {"status": 500, "message": "Internal Server Error"},
-                500,
-                {"X-HDMeal-Req-ID": req_id},
-            )
-
-
 # URL Router에 맵핑.(Rest URL정의)
 api.add_resource(CacheHealthCheck, "/cache/healthcheck/")
 api.add_resource(UserSettingsREST, "/user/settings/")
 api.add_resource(ManageUsageData, "/user/usage-data/")
 api.add_resource(Fulfillment, "/fulfillment/")
 api.add_resource(Skill, "/skill/")
-api.add_resource(WebAppAPI, "/api/webapp/")
 
 # 서버 실행
 if __name__ == "__main__":
