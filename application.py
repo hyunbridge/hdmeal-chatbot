@@ -139,33 +139,6 @@ class UserSettingsREST(Resource):
         return None, 200, cors_headers
 
 
-# 사용 데이터 관리
-class ManageUsageData(Resource):
-    @staticmethod
-    @request_id
-    def get():
-        cors_headers["X-HDMeal-Req-ID"] = req_id
-        response = user.get_usage_data(request, req_id, debugging)
-        if isinstance(response, tuple):
-            return response + (cors_headers,)
-        else:
-            return response, 200, cors_headers
-
-    @staticmethod
-    @request_id
-    def delete():
-        cors_headers["X-HDMeal-Req-ID"] = req_id
-        response = user.delete_usage_data(request, req_id, debugging)
-        if isinstance(response, tuple):
-            return response + (cors_headers,)
-        else:
-            return response, 200, cors_headers
-
-    @staticmethod
-    def options():
-        return None, 200, cors_headers
-
-
 # Fulfillment API
 class Fulfillment(Resource):
     @staticmethod
@@ -251,8 +224,6 @@ class Fulfillment(Resource):
                     ]
         except ValueError:
             params["date"] = None
-        # 로그 남기기
-        security.log_req(uid, utterance, intent, params, req_id, "Dialogflow")
         # 요청 수행하기
         respns: tuple = chat.router(prefix, uid, intent, params, req_id, debugging)
         # Fulfillment API 형식으로 변환
@@ -360,8 +331,6 @@ class Skill(Resource):
         enc = hashlib.sha256()
         enc.update(uid.encode("utf-8"))
         uid: str = "KT-" + enc.hexdigest()
-        # 로그 남기기
-        security.log_req(uid, utterance, intent, params, req_id, "Kakao i")
         # 요청 수행하기
         respns: tuple = chat.router("KT", uid, intent, params, req_id, debugging)
         # Kakao i API 형식으로 변환
@@ -418,7 +387,6 @@ class Skill(Resource):
 # URL Router에 맵핑.(Rest URL정의)
 api.add_resource(CacheHealthCheck, "/cache/healthcheck/")
 api.add_resource(UserSettingsREST, "/user/settings/")
-api.add_resource(ManageUsageData, "/user/usage-data/")
 api.add_resource(Fulfillment, "/fulfillment/")
 api.add_resource(Skill, "/skill/")
 

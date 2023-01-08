@@ -15,14 +15,12 @@ import requests
 from authlib.jose import JsonWebToken, JWTClaims
 from modules.common import base58, conf, log
 
-# DB정보 불러오기
-connection = pymongo.MongoClient(conf.configs["DataBase"]["ConnectString"])
-db = connection.hdmeal
-utterances_collection = db.utterances
 # 토큰 불러오기
 tokens: dict = conf.configs["Tokens"]["HDM"]
 # 사용할 JWT 알고리즘
 jwt = JsonWebToken(["HS256"])
+
+
 # JWT 토큰 검증
 claim_options = {
     "iss": {"essential": True, "values": ["HDMeal-UserSettings"]},
@@ -35,23 +33,6 @@ claim_options = {
         "validate": JWTClaims.validate_exp,
     },
 }
-
-
-# DB에 요청 기록
-def log_req(
-    uid: str, utterance: str, intent: str, params: dict, req_id: str, platform: str
-):
-    utterances_collection.insert_one(
-        {
-            "Platform": platform,
-            "Date": datetime.datetime.utcnow(),
-            "Request ID": req_id,
-            "User ID": uid,
-            "Utterance": utterance,
-            "Intent": intent,
-            "Parameters": params,
-        }
-    )
 
 
 # JWT 토큰 생성
