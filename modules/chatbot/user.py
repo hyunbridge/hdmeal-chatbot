@@ -51,15 +51,19 @@ def get_user(uid: str, req_id: str, debugging: bool):
             return return_data
         if debugging:
             print(data[uid])
-        if data[uid][0] != "" or data[uid][1] != "":  # 사용자 정보 있을 때
-            return_data = [data[uid][0], data[uid][1]]
+        if data[uid]["Grade"] != "" or data[uid]["Class"] != "":  # 사용자 정보 있을 때
+            return_data = [
+                data[uid]["Grade"],
+                data[uid]["Class"],
+                data[uid]["Preferences"],
+            ]
             log.info("[#%s] get_user@modules/user.py: Succeeded" % req_id)
         else:  # 사용자 정보 없을 때
             return_data = [None, None, {}]
             log.info("[#%s] get_user@modules/user.py: No User Info" % req_id)
         return return_data
-    except Exception:
-        return Exception
+    except Exception as e:
+        return e
 
 
 # 사용자 생성 및 수정
@@ -125,7 +129,7 @@ def manage_user(
             json.dump(data, write_file, ensure_ascii=False, indent="\t")
             log.info("[#%s] manage_user@user.py: Succeeded" % req_id)
             return return_msg
-    except ZeroDivisionError:
+    except Exception:
         log.err("[#%s] manage_user@user.py: Failed" % req_id)
         return Exception
 
