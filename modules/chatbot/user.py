@@ -9,16 +9,13 @@
 
 import datetime
 import json
-import pymongo
 import pytz
 from modules.common import security, conf, log
 
 timezone_local = pytz.timezone("Asia/Seoul")
 
-# DB정보 불러오기
-connection = pymongo.MongoClient(conf.configs["DataBase"]["ConnectString"])
-db = connection.hdmeal
-users_collection = db.users
+path = "./data/users.json"
+
 # 학급수 불러오기
 classes = int(conf.configs["School"]["Classes"])
 # 오류 메세지
@@ -42,25 +39,24 @@ def json_default(value):
 
 # 사용자 정보 읽기
 def get_user(uid: str, req_id: str, debugging: bool):
-    log.info("[#%s] get_user@user.py: Started Fetching User Info" % req_id)
+    log.info("[#%s] get_user@modules/user.py: Started Fetching User Info" % req_id)
     try:
-        data = users_collection.find_one({"UID": uid})
+        with open(path, encoding="utf-8") as data_file:
+            data = json.load(data_file)
         if debugging:
             print(data)
-        if not data:  # 사용자 정보 없을 때
+        if not uid in data:  # 사용자 정보 없을 때
             return_data = [None, None, {}]
-            log.info("[#%s] get_user@user.py: No User Info" % req_id)
+            log.info("[#%s] get_user@modules/user.py: No User Info" % req_id)
             return return_data
-        if data["Grade"] and data["Class"]:  # 사용자 정보 있을 때
-            return_data = [
-                data["Grade"],
-                data["Class"],
-                data.get("Preferences", preferences_default),
-            ]
-            log.info("[#%s] get_user@user.py: Succeeded" % req_id)
+        if debugging:
+            print(data[uid])
+        if data[uid][0] != "" or data[uid][1] != "":  # 사용자 정보 있을 때
+            return_data = [data[uid][0], data[uid][1]]
+            log.info("[#%s] get_user@modules/user.py: Succeeded" % req_id)
         else:  # 사용자 정보 없을 때
             return_data = [None, None, {}]
-            log.info("[#%s] get_user@user.py: No User Info" % req_id)
+            log.info("[#%s] get_user@modules/user.py: No User Info" % req_id)
         return return_data
     except Exception:
         return Exception
@@ -77,36 +73,59 @@ def manage_user(
 ):
     log.info("[#%s] manage_user@user.py: Started Managing User Info" % req_id)
     try:
-        current_settings = users_collection.find_one({"UID": uid}, {"_id": False})
-        if preferences:
-            new_settings = {
-                "UID": uid,
-                "Grade": user_grade,
-                "Class": user_class,
-                "Preferences": preferences,
-            }
-        else:
-            new_settings = {
-                "UID": uid,
-                "Grade": user_grade,
-                "Class": user_class,
-                "Preferences": current_settings.get("Preferences", preferences_default),
-            }
+        with open(path, encoding="utf-8") as data_file:
+            data = json.load(data_file)
         if debugging:
-            print(current_settings)
-        if current_settings:  # 사용자 정보 있을 때
+            print(data)
+        if uid in data:  # 사용자 정보 있을 때
+            current_settings = data[uid]
+            if preferences:
+                new_settings = {
+                    "Grade": user_grade,
+                    "Class": user_class,
+                    "Preferences": preferences,
+                }
+            else:
+                new_settings = {
+                    "Grade": user_grade,
+                    "Class": user_class,
+                    "Preferences": current_settings.get(
+                        "Preferences", preferences_default
+                    ),
+                }
+            if debugging:
+                print(current_settings)
             if current_settings == new_settings:  # 사용자 정보 똑같을 때
                 log.info("[#%s] manage_user@user.py: Same" % req_id)
                 return "Same"
             else:  # 사용자 정보 있고 같지도 않을 때 - 업데이트
-                users_collection.update({"UID": uid}, {"$set": new_settings})
+                del data[uid]
+                data[uid] = new_settings
+                if debugging:
+                    print("DEL USER")
                 log.info("[#%s] manage_user@user.py: Updated" % req_id)
-                return "Updated"
+                return_msg = "Updated"
         else:  # 사용자 정보 없을 때 - 생성
-            users_collection.insert_one(new_settings)
+            if preferences:
+                new_settings = {
+                    "Grade": user_grade,
+                    "Class": user_class,
+                    "Preferences": preferences,
+                }
+            else:
+                new_settings = {
+                    "Grade": user_grade,
+                    "Class": user_class,
+                    "Preferences": preferences_default,
+                }
             log.info("[#%s] manage_user@user.py: Registered" % req_id)
-            return "Registered"
-    except Exception:
+            return_msg = "Registered"
+            data[uid] = new_settings
+        with open(path, "w", encoding="utf-8") as write_file:
+            json.dump(data, write_file, ensure_ascii=False, indent="\t")
+            log.info("[#%s] manage_user@user.py: Succeeded" % req_id)
+            return return_msg
+    except ZeroDivisionError:
         log.err("[#%s] manage_user@user.py: Failed" % req_id)
         return Exception
 
@@ -115,14 +134,19 @@ def manage_user(
 def delete_user(uid: str, req_id: str, debugging: bool):
     log.info("[#%s] delete_user@user.py: Started Deleting User Info" % req_id)
     try:
-        data = users_collection.find_one({"UID": uid})
-        if data:  # 사용자 정보 있을 때
+        with open(path, encoding="utf-8") as data_file:
+            data = json.load(data_file)
+        if uid in data:  # 사용자 정보 있을 때
             if debugging:
                 print("DEL USER")
-            users_collection.remove({"UID": uid})
+            del data[uid]
         else:  # 사용자 정보 없을 때
             log.info("[#%s] delete_user@user.py: No User Info" % req_id)
             return "NotExist"
+        with open(path, "w", encoding="utf-8") as write_file:
+            json.dump(data, write_file, ensure_ascii=False, indent="\t")
+            log.info("[#%s] delete_user@user.py: Succeeded" % req_id)
+            return "Deleted"
     except Exception:
         log.err("[#%s] delete_user@user.py: Failed" % req_id)
         return Exception
@@ -281,13 +305,12 @@ def user_settings_rest_delete(req, req_id, debugging):
 if __name__ == "__main__":
     log.init()
     # 0 - GetUser, 1 - ManageUser, 2 - DeleteUser
-    flag = 2
+    flag = 1
     user_id = "uid"
     user_grade = 1
     user_class = 1
 
-    path = "../data/user/user.json"
-    admin_path = "../data/user/admin.json"
+    path = "../data/users.json"
     if flag == 0:
         print(get_user(user_id, "****DEBUG****", True))
     elif flag == 1:
