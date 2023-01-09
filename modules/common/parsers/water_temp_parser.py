@@ -8,11 +8,13 @@
 # water_temp_parser.py - 실시간수질정보시스템 서버에 접속하여 수온정보를 파싱해오는 스크립트입니다.
 
 import datetime
+import os
 import urllib.error
 import urllib.request
-from modules.common import log, conf
 
-api_key = conf.configs["Tokens"]["Seoul"]
+from modules.common import log
+
+api_key = os.environ.get("HDMeal-SeoulData-Token")
 
 
 def get(req_id, debugging):

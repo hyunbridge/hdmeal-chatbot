@@ -12,16 +12,16 @@
 
 from decimal import Decimal
 
-alphabet = '123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ'
+alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
 base_count = len(alphabet)
 
 
 def encode(num):
-    """ Returns num in a base58-encoded string """
-    encoded = ''
+    """Returns num in a base58-encoded string"""
+    encoded = ""
 
     if num < 0:
-        return ''
+        return ""
 
     while num >= base_count:
         mod = num % base_count
@@ -35,7 +35,7 @@ def encode(num):
 
 
 def decode(s):
-    """ Decodes the base58-encoded string s into an integer """
+    """Decodes the base58-encoded string s into an integer"""
     decoded = 0
     multi = 1
     s = s[::-1]

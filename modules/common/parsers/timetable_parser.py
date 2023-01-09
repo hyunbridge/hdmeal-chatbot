@@ -14,12 +14,12 @@ import urllib.error
 import urllib.request
 from itertools import groupby
 
-from modules.common import conf, log
+from modules.common import log
 
 # 설정 불러오기
-NEIS_OPENAPI_TOKEN = conf.configs['Tokens']['NEIS']  # NEUS 오픈API 인증 토큰
-ATPT_OFCDC_SC_CODE = conf.configs['School']['NEIS']['ATPT_OFCDC_SC_CODE']  # 시도교육청코드
-SD_SCHUL_CODE = conf.configs['School']['NEIS']['SD_SCHUL_CODE']  # 표준학교코드
+NEIS_OPENAPI_TOKEN = os.environ.get("HDMeal-NEIS-Token")  # NEUS 오픈API 인증 토큰
+ATPT_OFCDC_SC_CODE = os.environ.get("HDMeal-NEIS-ATPT_OFCDC_SC_CODE")  # 시도교육청코드
+SD_SCHUL_CODE = os.environ.get("HDMeal-NEIS-SD_SCHUL_CODE")  # 표준학교코드
 
 timetable = {}
 
@@ -31,10 +31,12 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
     tt_grade = str(tt_grade)
     tt_class = str(tt_class)
     date_string = tt_date.strftime("%Y-%m-%d")
-    filename = 'data/cache/TT-%s.json' % date_string
+    filename = "data/cache/TT-%s.json" % date_string
 
     log.info(
-        "[#%s] parse@timetable_parser.py: Started Parsing Timetable(%s-%s, %s)" % (req_id, tt_grade, tt_class, tt_date))
+        "[#%s] parse@timetable_parser.py: Started Parsing Timetable(%s-%s, %s)"
+        % (req_id, tt_grade, tt_class, tt_date)
+    )
 
     if tt_date.weekday() > 4:
         return None
@@ -42,10 +44,17 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
     # 데이터 가져오기
     def fetch():
         global timetable
-        req = urllib.request.urlopen("https://open.neis.go.kr/hub/hisTimetable?KEY=%s&Type=json&pSize=1000"
-                                     "&ATPT_OFCDC_SC_CODE=%s&SD_SCHUL_CODE=%s&ALL_TI_YMD=%s" %
-                                     (NEIS_OPENAPI_TOKEN, ATPT_OFCDC_SC_CODE, SD_SCHUL_CODE, tt_date.strftime("%Y%m%d")),
-                                     timeout=2)
+        req = urllib.request.urlopen(
+            "https://open.neis.go.kr/hub/hisTimetable?KEY=%s&Type=json&pSize=1000"
+            "&ATPT_OFCDC_SC_CODE=%s&SD_SCHUL_CODE=%s&ALL_TI_YMD=%s"
+            % (
+                NEIS_OPENAPI_TOKEN,
+                ATPT_OFCDC_SC_CODE,
+                SD_SCHUL_CODE,
+                tt_date.strftime("%Y%m%d"),
+            ),
+            timeout=2,
+        )
         data = json.loads(req.read())
         print(data)
 
@@ -54,8 +63,10 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
 
                 timetable_raw_data.append([i["GRADE"], i["CLASS_NM"], i["ITRT_CNTNT"]])
         except (urllib.error.HTTPError, urllib.error.URLError) as e:
-            log.err("[#%s] fetch.parse@timetable_parser.py: Failed to Parse Timetable(%s-%s, %s) because %s" % (
-                req_id, tt_grade, tt_class, tt_date, e))
+            log.err(
+                "[#%s] fetch.parse@timetable_parser.py: Failed to Parse Timetable(%s-%s, %s) because %s"
+                % (req_id, tt_grade, tt_class, tt_date, e)
+            )
             raise ConnectionError
 
         print(timetable_raw_data)
@@ -66,8 +77,7 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
                 timetable[grade][class_] = [i[2] for i in y if i[2] != "토요휴업일"]
 
         if timetable:
-            with open(filename, 'w',
-                      encoding="utf-8") as make_file:
+            with open(filename, "w", encoding="utf-8") as make_file:
                 json.dump(timetable, make_file, ensure_ascii=False)
                 print("File Created")
 
@@ -79,17 +89,21 @@ def parse(tt_grade, tt_class, year, month, date, req_id, debugging):
         except Exception:  # 캐시 읽을 수 없으면
             try:
                 # 캐시 삭제
-                os.remove('data/cache/TT.json')
+                os.remove("data/cache/TT.json")
             except Exception as error:
-                log.err("[#%s] parse@timetable_parser.py: Failed to Delete Cache" % req_id)
+                log.err(
+                    "[#%s] parse@timetable_parser.py: Failed to Delete Cache" % req_id
+                )
                 return error
             fetch()  # 파싱
     else:  # 캐시 없으면
         log.info("[#%s] parse@timetable_parser.py: No Cache" % req_id)
         fetch()  # 파싱
 
-    log.info("[#%s] parse@timetable_parser.py: Succeeded(%s-%s, %s)" % (
-        req_id, tt_grade, tt_class, tt_date))
+    log.info(
+        "[#%s] parse@timetable_parser.py: Succeeded(%s-%s, %s)"
+        % (req_id, tt_grade, tt_class, tt_date)
+    )
 
     return timetable[tt_grade][tt_class]
 

@@ -9,11 +9,13 @@
 
 import datetime
 import hashlib
+import os
 import time
 from itertools import groupby
 from threading import Thread
+
 from modules.chatbot import user
-from modules.common import security, conf, log, get_data
+from modules.common import security, log, get_data
 
 
 # Skill 응답용 JSON 생성
@@ -473,7 +475,7 @@ def briefing(uid: str, req_id: str, debugging: bool):
 
 
 def user_settings(uid: str, req_id: str):
-    url = conf.configs["Misc"]["Settings"]["BaseURL"]
+    url = os.environ.get("HDMeal-BaseURL")
     return [
         {
             "type": "card",

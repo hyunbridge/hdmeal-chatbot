@@ -10,11 +10,16 @@ import argparse
 import datetime
 import hashlib
 import json
+import os
+
+from dotenv import load_dotenv
 from flask import Flask
 from flask_restful import request, Api, Resource
 
 from modules.common import conf, log
 
+load_dotenv(verbose=True)
+print(os.environ)
 conf.load()
 
 from modules.chatbot import chat, user
@@ -95,9 +100,7 @@ class CacheHealthCheck(Resource):
 
 # 내 정보 관리(API)
 cors_headers = {
-    "Access-Control-Allow-Origin": conf.configs["Misc"]["Settings"][
-        "Access-Control-Allow-Origin"
-    ],
+    "Access-Control-Allow-Origin": os.environ.get("HDMeal-AllowedOrigins", "*"),
     "Access-Control-Allow-Headers": "Content-Type,Access-Control-Allow-Origin,Access-Control-Allow-Headers",
     "Access-Control-Allow-Methods": "GET, POST, DELETE",
 }

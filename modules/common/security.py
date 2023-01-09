@@ -8,15 +8,21 @@
 # security.py - 보안 관련 기능들을 담당하는 스크립트입니다.
 
 import datetime
+import json
+import os
 import random
+
 import authlib.jose.errors as JWTErrors
-import pymongo
 import requests
 from authlib.jose import JsonWebToken, JWTClaims
-from modules.common import base58, conf, log
 
-# 토큰 불러오기
-tokens: dict = conf.configs["Tokens"]["HDM"]
+from modules.common import base58, log
+
+# 설정 불러오기
+TOKENS = json.loads(os.environ.get("HDMeal-AuthTokens", "[]"))
+JWT_SECRET = os.environ.get("HDMeal-JWTSecret")
+RECAPTCHA_TOKEN = os.environ.get("HDMeal-reCAPTCHA-Token")
+
 # 사용할 JWT 알고리즘
 jwt = JsonWebToken(["HS256"])
 
@@ -49,7 +55,7 @@ def generate_token(issuer: str, uid: str, scope: list, req_id: str):
             "nbf": now,
             "exp": now + datetime.timedelta(seconds=600),
         },
-        conf.configs["Misc"]["Settings"]["Secret"],
+        JWT_SECRET,
     ).decode("UTF-8")
 
 
@@ -58,7 +64,7 @@ def validate_token(token: str, req_id: str):
     try:
         decoded = jwt.decode(
             token,
-            conf.configs["Misc"]["Settings"]["Secret"],
+            JWT_SECRET,
             claims_options=claim_options,
         )
         decoded.validate()
@@ -80,7 +86,7 @@ def validate_recaptcha(token: str, req_id: str):
     try:
         req = requests.post(
             "https://www.google.com/recaptcha/api/siteverify?secret=%s&response=%s"
-            % (conf.configs["Tokens"]["reCAPTCHA"], token),
+            % (RECAPTCHA_TOKEN, token),
             data=None,
         )
         rspns = req.json()
@@ -116,8 +122,8 @@ def generate_req_id():
 
 # 토큰 인증
 def auth(token: str, req_id: str):
-    if token in tokens:
-        log.info('[#%s] Authorized with Token "%s"' % (req_id, tokens[token]))
+    if token in TOKENS:
+        log.info("[#%s] Authorized with Token" % req_id)
         return True
     else:
         log.info("[#%s] Failed to Authorize(Token Not Match)" % req_id)

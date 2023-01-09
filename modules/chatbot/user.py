@@ -9,17 +9,57 @@
 
 import datetime
 import json
+import os
+
 import pytz
-from modules.common import security, conf, log
+
+from modules.common import security, log
 
 timezone_local = pytz.timezone("Asia/Seoul")
 
 path = "./data/users.json"
 
 # 학급수 불러오기
-classes = int(conf.configs["School"]["Classes"])
+classes = int(os.environ.get("HDMeal-NumOfClasses"))
 # 오류 메세지
-errors_conf = conf.configs["Misc"]["Errors"]
+errors_conf = {
+    "ServerError": [
+        "서버 오류가 발생했습니다.",
+        500,
+    ],
+    "InvalidRequest": [
+        "올바르지 않은 요청입니다.",
+        400,
+    ],
+    "NoToken": [
+        "토큰이 없습니다.",
+        401,
+    ],
+    "ExpiredToken": [
+        "만료된 토큰입니다.",
+        403,
+    ],
+    "InvalidToken": [
+        "올바르지 않은 토큰입니다.",
+        400,
+    ],
+    "NoRecaptchaToken": [
+        "리캡챠 토큰이 없습니다.",
+        401,
+    ],
+    "InvalidRecaptchaToken": [
+        "만료된 리캡챠 토큰입니다.",
+        403,
+    ],
+    "RecaptchaTokenValidationError": [
+        "올바르지 않은 리캡챠 토큰입니다.",
+        400,
+    ],
+    "TooManyResult": [
+        "결과값이 너무 많습니다.",
+        400,
+    ],
+}
 
 # 설정 기본값
 preferences_default = {"AllergyInfo": "Number"}
@@ -27,7 +67,7 @@ preferences_values = {"AllergyInfo": ["None", "Number", "FullText"]}
 
 # 오류 발생 처리
 def hdm_error(code: str):
-    return {"message": errors_conf[code][0]}, int(errors_conf[code][1])
+    return {"message": errors_conf[code][0]}, errors_conf[code][1]
 
 
 # JSON에서 Datetime 포맷 처리
@@ -158,7 +198,7 @@ def delete_user(uid: str, req_id: str, debugging: bool):
 
 # 관리자 인증
 def auth_admin(uid, req_id, debugging):
-    data = conf.configs["Admins"]
+    data = json.loads(os.environ.get("HDMeal-AdminTokens", "[]"))
     if debugging:
         print(uid)
         print(data)

@@ -9,14 +9,16 @@
 
 import datetime
 import json
+import os
 import re
 import urllib.error
 import urllib.request
+
 from modules.common import conf, log
 
-NEIS_OPENAPI_TOKEN = conf.configs["Tokens"]["NEIS"]  # NEUS 오픈API 인증 토큰
-ATPT_OFCDC_SC_CODE = conf.configs["School"]["NEIS"]["ATPT_OFCDC_SC_CODE"]  # 시도교육청코드
-SD_SCHUL_CODE = conf.configs["School"]["NEIS"]["SD_SCHUL_CODE"]  # 표준학교코드
+NEIS_OPENAPI_TOKEN = os.environ.get("HDMeal-NEIS-Token")  # NEUS 오픈API 인증 토큰
+ATPT_OFCDC_SC_CODE = os.environ.get("HDMeal-NEIS-ATPT_OFCDC_SC_CODE")  # 시도교육청코드
+SD_SCHUL_CODE = os.environ.get("HDMeal-NEIS-SD_SCHUL_CODE")  # 표준학교코드
 WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"]
 DELICIOUS = conf.delicious
 

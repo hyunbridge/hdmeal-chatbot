@@ -12,6 +12,7 @@ import json
 import os
 from collections import OrderedDict
 from threading import Thread
+
 from modules.common import log, get_data
 from modules.common.parsers import timetable_parser
 
@@ -20,7 +21,9 @@ from modules.common.parsers import timetable_parser
 def purge(req_id, debugging):
     dict_data = OrderedDict()
     try:
-        file_list = [file for file in os.listdir("data/cache/") if file.endswith(".json")]
+        file_list = [
+            file for file in os.listdir("data/cache/") if file.endswith(".json")
+        ]
         for file in file_list:
             os.remove("data/cache/" + file)
     except Exception as error:
@@ -36,39 +39,68 @@ def purge(req_id, debugging):
 
 # 캐시정보 가져오기
 def get(req_id, debugging):
-    filenames = os.listdir('data/cache/')
+    filenames = os.listdir("data/cache/")
     return_data = str()
     for filename in filenames:
         ext = os.path.splitext(filename)[-1]
         # 시간표와 수온, 날씨 캐시 파일 숨김
-        if ext == '.json' and filename != "TT.json" and filename != "wtemp.json" and filename != "weather.json":
+        if (
+            ext == ".json"
+            and filename != "TT.json"
+            and filename != "wtemp.json"
+            and filename != "weather.json"
+        ):
             if debugging:
                 print(filename)
             return_data = "%s\n%s" % (return_data, filename.replace(".json", ""))
     # 시간표 캐시 만료기한 조회
     if "TT.json" in filenames:
-        with open('data/cache/TT.json', encoding="utf-8") as data:  # 캐시 읽기
+        with open("data/cache/TT.json", encoding="utf-8") as data:  # 캐시 읽기
             timestamp = datetime.datetime.fromtimestamp(json.load(data)["Timestamp"])
-            if (datetime.datetime.now() - timestamp) < datetime.timedelta(hours=3):  # 캐시 만료됐는지 확인
-                time_left = int((datetime.timedelta(hours=3) - (datetime.datetime.now() - timestamp)).seconds / 60)
+            if (datetime.datetime.now() - timestamp) < datetime.timedelta(
+                hours=3
+            ):  # 캐시 만료됐는지 확인
+                time_left = int(
+                    (
+                        datetime.timedelta(hours=3)
+                        - (datetime.datetime.now() - timestamp)
+                    ).seconds
+                    / 60
+                )
                 return_data = "%s\n시간표 캐시 만료까지 %s분 남음" % (return_data, time_left)
             else:
                 return_data = "%s\n시간표 캐시 만료됨" % return_data
     # 한강 수온 캐시 만료기한 조회
     if "wtemp.json" in filenames:
-        with open('data/cache/wtemp.json', encoding="utf-8") as data:  # 캐시 읽기
+        with open("data/cache/wtemp.json", encoding="utf-8") as data:  # 캐시 읽기
             timestamp = datetime.datetime.fromtimestamp(json.load(data)["timestamp"])
-            if (datetime.datetime.now() - timestamp) < datetime.timedelta(minutes=76):  # 캐시 만료됐는지 확인
-                time_left = int((datetime.timedelta(minutes=76) - (datetime.datetime.now() - timestamp)).seconds / 60)
+            if (datetime.datetime.now() - timestamp) < datetime.timedelta(
+                minutes=76
+            ):  # 캐시 만료됐는지 확인
+                time_left = int(
+                    (
+                        datetime.timedelta(minutes=76)
+                        - (datetime.datetime.now() - timestamp)
+                    ).seconds
+                    / 60
+                )
                 return_data = "%s\n한강 수온 캐시 만료까지 %s분 남음" % (return_data, time_left)
             else:
                 return_data = "%s\n한강 수온 캐시 만료됨" % return_data
     # 날씨 캐시 만료기한 조회
     if "weather.json" in filenames:
-        with open('data/cache/weather.json', encoding="utf-8") as data:  # 캐시 읽기
+        with open("data/cache/weather.json", encoding="utf-8") as data:  # 캐시 읽기
             timestamp = datetime.datetime.fromtimestamp(json.load(data)["Timestamp"])
-            if (datetime.datetime.now() - timestamp) < datetime.timedelta(hours=1):  # 캐시 만료됐는지 확인
-                time_left = int((datetime.timedelta(hours=1) - (datetime.datetime.now() - timestamp)).seconds / 60)
+            if (datetime.datetime.now() - timestamp) < datetime.timedelta(
+                hours=1
+            ):  # 캐시 만료됐는지 확인
+                time_left = int(
+                    (
+                        datetime.timedelta(hours=1)
+                        - (datetime.datetime.now() - timestamp)
+                    ).seconds
+                    / 60
+                )
                 return_data = "%s\n날씨 캐시 만료까지 %s분 남음" % (return_data, time_left)
             else:
                 return_data = "%s\n날씨 캐시 만료됨" % return_data
@@ -78,45 +110,71 @@ def get(req_id, debugging):
 
 def health_check(req_id, debugging):
     global status_tt, status_wtemp, status_weather
-    filenames = os.listdir('data/cache/')
+    filenames = os.listdir("data/cache/")
     now = datetime.datetime.now()
 
     # 시간표 캐시 만료기한 조회
     def check_tt():
         global status_tt
         if "TT.json" in filenames:
-            with open('data/cache/TT.json', encoding="utf-8") as data:  # 캐시 읽기
-                timestamp = datetime.datetime.fromtimestamp(json.load(data)["Timestamp"])
-                if (datetime.datetime.now() - timestamp) < datetime.timedelta(hours=3):  # 캐시 만료됐는지 확인
-                    time_left = int((datetime.timedelta(hours=3) - (datetime.datetime.now() - timestamp)).seconds / 60)
+            with open("data/cache/TT.json", encoding="utf-8") as data:  # 캐시 읽기
+                timestamp = datetime.datetime.fromtimestamp(
+                    json.load(data)["Timestamp"]
+                )
+                if (datetime.datetime.now() - timestamp) < datetime.timedelta(
+                    hours=3
+                ):  # 캐시 만료됐는지 확인
+                    time_left = int(
+                        (
+                            datetime.timedelta(hours=3)
+                            - (datetime.datetime.now() - timestamp)
+                        ).seconds
+                        / 60
+                    )
                     status_tt = "Vaild (Up to %s Min(s))" % time_left
                 else:
                     try:
-                        timetable_parser.parse(1, 1, now.year, now.month, now.day, req_id, debugging)
+                        timetable_parser.parse(
+                            1, 1, now.year, now.month, now.day, req_id, debugging
+                        )
                         status_tt = "Expired (Regenerated)"
                     except Exception as e:
                         log.err(
-                            "[#%s] health_check@cache.py: Failed to Regenerate Cache(Timetable) because %s" %
-                            (req_id, e))
+                            "[#%s] health_check@cache.py: Failed to Regenerate Cache(Timetable) because %s"
+                            % (req_id, e)
+                        )
                         status_tt = "Expired (Failed)"
         else:
             try:
-                timetable_parser.parse(1, 1, now.year, now.month, now.day, req_id, debugging)
+                timetable_parser.parse(
+                    1, 1, now.year, now.month, now.day, req_id, debugging
+                )
                 status_tt = "NotFound (Regenerated)"
             except Exception as e:
-                log.err("[#%s] health_check@cache.py: Failed to Regenerate Cache(Timetable) because %s" %
-                        (req_id, e))
+                log.err(
+                    "[#%s] health_check@cache.py: Failed to Regenerate Cache(Timetable) because %s"
+                    % (req_id, e)
+                )
                 status_tt = "NotFound (Failed)"
 
     # 한강 수온 캐시 만료기한 조회
     def check_wtemp():
         global status_wtemp
         if "wtemp.json" in filenames:
-            with open('data/cache/wtemp.json', encoding="utf-8") as data:  # 캐시 읽기
-                timestamp = datetime.datetime.fromtimestamp(json.load(data)["timestamp"])
-                if (datetime.datetime.now() - timestamp) < datetime.timedelta(minutes=76):  # 캐시 만료됐는지 확인
+            with open("data/cache/wtemp.json", encoding="utf-8") as data:  # 캐시 읽기
+                timestamp = datetime.datetime.fromtimestamp(
+                    json.load(data)["timestamp"]
+                )
+                if (datetime.datetime.now() - timestamp) < datetime.timedelta(
+                    minutes=76
+                ):  # 캐시 만료됐는지 확인
                     time_left = int(
-                        (datetime.timedelta(minutes=76) - (datetime.datetime.now() - timestamp)).seconds / 60)
+                        (
+                            datetime.timedelta(minutes=76)
+                            - (datetime.datetime.now() - timestamp)
+                        ).seconds
+                        / 60
+                    )
                     status_wtemp = "Vaild (Up to %s Min(s))" % time_left
                 else:
                     try:
@@ -124,8 +182,9 @@ def health_check(req_id, debugging):
                         status_wtemp = "Expired (Regenerated)"
                     except Exception as e:
                         log.err(
-                            "[#%s] health_check@cache.py: Failed to Regenerate Cache(WTemp) because %s" %
-                            (req_id, e))
+                            "[#%s] health_check@cache.py: Failed to Regenerate Cache(WTemp) because %s"
+                            % (req_id, e)
+                        )
                         status_wtemp = "Expired (Failed)"
         else:
             try:
@@ -133,18 +192,29 @@ def health_check(req_id, debugging):
                 status_wtemp = "NotFound (Regenerated)"
             except Exception as e:
                 log.err(
-                    "[#%s] health_check@cache.py: Failed to Regenerate Cache(WTemp) because %s" %
-                    (req_id, e))
+                    "[#%s] health_check@cache.py: Failed to Regenerate Cache(WTemp) because %s"
+                    % (req_id, e)
+                )
                 status_wtemp = "NotFound (Failed)"
 
     # 날씨 캐시 만료기한 조회
     def check_weather():
         global status_weather
         if "weather.json" in filenames:
-            with open('data/cache/weather.json', encoding="utf-8") as data:  # 캐시 읽기
-                timestamp = datetime.datetime.fromtimestamp(json.load(data)["Timestamp"])
-                if (datetime.datetime.now() - timestamp) < datetime.timedelta(hours=1):  # 캐시 만료됐는지 확인
-                    time_left = int((datetime.timedelta(hours=1) - (datetime.datetime.now() - timestamp)).seconds / 60)
+            with open("data/cache/weather.json", encoding="utf-8") as data:  # 캐시 읽기
+                timestamp = datetime.datetime.fromtimestamp(
+                    json.load(data)["Timestamp"]
+                )
+                if (datetime.datetime.now() - timestamp) < datetime.timedelta(
+                    hours=1
+                ):  # 캐시 만료됐는지 확인
+                    time_left = int(
+                        (
+                            datetime.timedelta(hours=1)
+                            - (datetime.datetime.now() - timestamp)
+                        ).seconds
+                        / 60
+                    )
                     status_weather = "Vaild (Up to %s Min(s))" % time_left
                 else:
                     try:
@@ -152,8 +222,9 @@ def health_check(req_id, debugging):
                         status_weather = "Expired (Regenerated)"
                     except Exception as e:
                         log.err(
-                            "[#%s] health_check@cache.py: Failed to Regenerate Cache(Weather) because %s" %
-                            (req_id, e))
+                            "[#%s] health_check@cache.py: Failed to Regenerate Cache(Weather) because %s"
+                            % (req_id, e)
+                        )
                         status_weather = "Expired (Failed)"
         else:
             try:
@@ -161,8 +232,9 @@ def health_check(req_id, debugging):
                 status_weather = "NotFound (Regenerated)"
             except Exception as e:
                 log.err(
-                    "[#%s] health_check@cache.py: Failed to Regenerate Cache(Weather) because %s" %
-                    (req_id, e))
+                    "[#%s] health_check@cache.py: Failed to Regenerate Cache(Weather) because %s"
+                    % (req_id, e)
+                )
                 status_weather = "NotFound (Failed)"
 
     # 쓰레드 정의
@@ -178,4 +250,8 @@ def health_check(req_id, debugging):
     th_wtemp.join()
     th_weather.join()
 
-    return {"Timetable": status_tt, "HanRiverTemperature": status_wtemp, "Weather": status_weather}
+    return {
+        "Timetable": status_tt,
+        "HanRiverTemperature": status_wtemp,
+        "Weather": status_weather,
+    }

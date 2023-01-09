@@ -7,12 +7,14 @@
 # Copyright 2019-2020, Hyungyo Seo
 # weather_parser.py - 날씨정보를 파싱해오는 스크립트입니다.
 
+import os
 import urllib.error
 import urllib.request
 import xml.etree.ElementTree
-from modules.common import conf, log
 
-region = conf.configs["School"]["KMAZone"]
+from modules.common import log
+
+region = os.environ.get("HDMeal-KMAZone")
 
 
 def parse(req_id, debugging):
