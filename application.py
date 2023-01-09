@@ -19,7 +19,7 @@ from flask_restful import request, Api, Resource
 from modules.common import conf, log
 
 load_dotenv(verbose=True)
-print(os.environ)
+
 conf.load()
 
 from modules.chatbot import chat, user
