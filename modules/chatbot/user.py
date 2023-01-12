@@ -102,6 +102,10 @@ def get_user(uid: str, req_id: str, debugging: bool):
             return_data = [None, None, {}]
             log.info("[#%s] get_user@modules/user.py: No User Info" % req_id)
         return return_data
+    except FileNotFoundError:
+        with open(path, "w", encoding="utf-8") as write_file:
+            json.dump({}, write_file, ensure_ascii=False, indent="\t")
+        return [None, None, {}]
     except Exception as e:
         return e
 
@@ -117,8 +121,11 @@ def manage_user(
 ):
     log.info("[#%s] manage_user@user.py: Started Managing User Info" % req_id)
     try:
-        with open(path, encoding="utf-8") as data_file:
-            data = json.load(data_file)
+        try:
+            with open(path, encoding="utf-8") as data_file:
+                data = json.load(data_file)
+        except FileNotFoundError:
+            data = {}
         if debugging:
             print(data)
         if uid in data:  # 사용자 정보 있을 때
@@ -169,9 +176,9 @@ def manage_user(
             json.dump(data, write_file, ensure_ascii=False, indent="\t")
             log.info("[#%s] manage_user@user.py: Succeeded" % req_id)
             return return_msg
-    except Exception:
+    except Exception as e:
         log.err("[#%s] manage_user@user.py: Failed" % req_id)
-        return Exception
+        return e
 
 
 # 사용자 삭제
@@ -191,9 +198,9 @@ def delete_user(uid: str, req_id: str, debugging: bool):
             json.dump(data, write_file, ensure_ascii=False, indent="\t")
             log.info("[#%s] delete_user@user.py: Succeeded" % req_id)
             return "Deleted"
-    except Exception:
+    except Exception as e:
         log.err("[#%s] delete_user@user.py: Failed" % req_id)
-        return Exception
+        return e
 
 
 # 관리자 인증
