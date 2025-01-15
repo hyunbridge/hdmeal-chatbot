@@ -14,7 +14,7 @@ import xml.etree.ElementTree
 
 from modules.common import log
 
-region = os.environ.get("HDMeal-KMAZone")
+region = os.environ.get("HDMeal_KMAZone")
 
 
 def parse(req_id, debugging):

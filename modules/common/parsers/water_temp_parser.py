@@ -14,7 +14,7 @@ import urllib.request
 
 from modules.common import log
 
-api_key = os.environ.get("HDMeal-SeoulData-Token")
+api_key = os.environ.get("HDMeal_SeoulData_Token")
 
 
 def get(req_id, debugging):

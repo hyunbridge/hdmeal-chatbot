@@ -17,7 +17,7 @@ def init():
     # logger 인스턴스를 생성 및 로그 레벨 설정
     logger = logging.getLogger("crumbs")
 
-    log_level = os.environ.get("HDMeal-LogLevel")
+    log_level = os.environ.get("HDMeal_LogLevel")
     if log_level == "DEBUG":
         logger.setLevel(logging.DEBUG)
     elif log_level == "INFO":

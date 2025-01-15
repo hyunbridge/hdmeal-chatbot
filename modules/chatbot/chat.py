@@ -475,7 +475,7 @@ def briefing(uid: str, req_id: str, debugging: bool):
 
 
 def user_settings(uid: str, req_id: str):
-    url = os.environ.get("HDMeal-BaseURL")
+    url = os.environ.get("HDMeal_BaseURL")
     return [
         {
             "type": "card",

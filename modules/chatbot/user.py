@@ -20,7 +20,7 @@ timezone_local = pytz.timezone("Asia/Seoul")
 path = "./data/users.json"
 
 # 학급수 불러오기
-classes = int(os.environ.get("HDMeal-NumOfClasses"))
+classes = int(os.environ.get("HDMeal_NumOfClasses"))
 # 오류 메세지
 errors_conf = {
     "ServerError": [
@@ -205,7 +205,7 @@ def delete_user(uid: str, req_id: str, debugging: bool):
 
 # 관리자 인증
 def auth_admin(uid, req_id, debugging):
-    data = json.loads(os.environ.get("HDMeal-AdminTokens", "[]"))
+    data = json.loads(os.environ.get("HDMeal_AdminTokens", "[]"))
     if debugging:
         print(uid)
         print(data)

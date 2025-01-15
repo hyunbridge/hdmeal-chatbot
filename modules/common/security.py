@@ -19,9 +19,9 @@ from authlib.jose import JsonWebToken, JWTClaims
 from modules.common import base58, log
 
 # 설정 불러오기
-TOKENS = json.loads(os.environ.get("HDMeal-AuthTokens", "[]"))
-JWT_SECRET = os.environ.get("HDMeal-JWTSecret")
-RECAPTCHA_TOKEN = os.environ.get("HDMeal-reCAPTCHA-Token")
+TOKENS = json.loads(os.environ.get("HDMeal_AuthTokens", "[]"))
+JWT_SECRET = os.environ.get("HDMeal_JWTSecret")
+RECAPTCHA_TOKEN = os.environ.get("HDMeal_reCAPTCHA_Token")
 
 # 사용할 JWT 알고리즘
 jwt = JsonWebToken(["HS256"])

@@ -100,7 +100,7 @@ class CacheHealthCheck(Resource):
 
 # 내 정보 관리(API)
 cors_headers = {
-    "Access-Control-Allow-Origin": os.environ.get("HDMeal-AllowedOrigins", "*"),
+    "Access-Control-Allow-Origin": os.environ.get("HDMeal_AllowedOrigins", "*"),
     "Access-Control-Allow-Headers": "Content-Type,Access-Control-Allow-Origin,Access-Control-Allow-Headers",
     "Access-Control-Allow-Methods": "GET, POST, DELETE",
 }
